@@ -1,0 +1,3511 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0">
+<title>勤怠管理 — 蓮海工業株式会社</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f5f4f0;--card:#fff;--border:#e2e0d8;--text:#1a1a1a;--muted:#88867f;
+  --accent:#1a4a3a;--al:#e8f2ed;--at:#0d3328;
+  --danger:#8b2020;--dl:#fdf0f0;
+  --warn:#7a4e00;--wl:#fef6e4;
+  --info:#0d3a6e;--il:#eaf0fb;
+  --purple:#3c2d8a;--pl:#eeedfe;
+  --r:10px;--font:'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{font-family:var(--font);background:var(--bg);color:var(--text);min-height:100vh}
+/* ── utils ── */
+.hidden{display:none!important}
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:16px;margin-bottom:12px}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:20px}
+.b-in{background:var(--al);color:var(--at)}
+.b-out{background:var(--dl);color:var(--danger)}
+.b-off{background:#f0ede8;color:var(--muted)}
+.b-late{background:var(--wl);color:var(--warn)}
+.b-ok{background:var(--al);color:var(--at);font-size:11px;padding:2px 7px;border-radius:4px}
+.b-ot{background:var(--wl);color:var(--warn);font-size:11px;padding:2px 7px;border-radius:4px}
+/* ── 日報承認スタンプボタン ── */
+.btn-stamp-ok{background:#e6f6ee;color:#1e6e3e;border:2px solid #1e6e3e;border-radius:8px;font-weight:700;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s}
+.btn-stamp-ok:hover{background:#1e6e3e;color:#fff}
+.btn-stamp-ok.stamped{background:#1e6e3e;color:#fff;opacity:.85;cursor:default;pointer-events:none}
+.btn-stamp-rej{background:#fff4e6;color:#b85c00;border:2px solid #b85c00;border-radius:8px;font-weight:700;padding:6px 14px;font-size:13px;cursor:pointer;transition:all .15s}
+.btn-stamp-rej:hover{background:#b85c00;color:#fff}
+.btn-stamp-rej.stamped{background:#b85c00;color:#fff;opacity:.85;cursor:default;pointer-events:none}
+/* 承認フィルタータブ */
+.appr-tab{display:inline-block;padding:4px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg);color:var(--muted);transition:all .15s}
+.appr-tab.active{background:var(--accent);color:#fff;border-color:var(--accent)}
+.b-pend{background:var(--wl);color:var(--warn)}
+.b-appr{background:var(--al);color:var(--at)}
+.b-rej{background:var(--dl);color:var(--danger)}
+.b-emp{background:var(--il);color:var(--info)}
+.b-con{background:var(--pl);color:var(--purple)}
+.b-admin{background:#2d1a5a;color:#d8d4f8;font-size:10px;padding:1px 6px;border-radius:3px}
+.b-custom{background:#e8f4fb;color:#0d5a8a;font-size:10px;padding:2px 7px;border-radius:20px}
+.notif-badge{display:inline-block;background:var(--danger);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:10px;margin-left:3px;vertical-align:top;min-width:14px;text-align:center;line-height:1.4}
+.sec-title{font-size:11px;font-weight:700;color:var(--muted);letter-spacing:.1em;margin-bottom:10px}
+/* ── buttons ── */
+.btn{cursor:pointer;border:1px solid var(--border);border-radius:7px;padding:9px 18px;font-size:13px;font-weight:500;font-family:var(--font);background:var(--card);color:var(--text);transition:background .15s}
+.btn:hover{background:var(--bg)}
+.btn-p{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn-p:hover{background:var(--at)}
+.btn-d{background:var(--danger);border-color:var(--danger);color:#fff}
+.btn-d:hover{background:#6e1a1a}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-xs{padding:3px 8px;font-size:11px}
+.btn:disabled{opacity:.3;pointer-events:none}
+/* ── inputs ── */
+.inp{width:100%;border:1px solid var(--border);border-radius:7px;padding:10px 12px;font-size:14px;font-family:var(--font);background:var(--bg);color:var(--text);outline:none;transition:border-color .15s}
+.inp:focus{border-color:var(--accent);background:#fff}
+.inp-sm{padding:7px 10px;font-size:13px}
+/* ── login ── */
+#login-screen{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:24px}
+.login-logo{font-size:12px;color:var(--muted);letter-spacing:.1em;margin-bottom:6px}
+.login-title{font-size:22px;font-weight:700;color:var(--accent);margin-bottom:28px}
+.login-card{background:var(--card);border:1px solid var(--border);border-radius:var(--r);padding:26px 22px;width:100%;max-width:340px}
+.fl{font-size:11px;color:var(--muted);margin-bottom:4px;font-weight:500;letter-spacing:.04em}
+.type-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:4px}
+.type-btn{padding:9px 4px;border:1.5px solid var(--border);border-radius:7px;font-size:12px;font-family:var(--font);background:var(--bg);color:var(--muted);cursor:pointer;transition:all .15s;text-align:center;font-weight:500}
+.type-btn.sel{border-color:var(--accent);background:var(--al);color:var(--at)}
+/* ── app ── */
+#app-screen{display:none;min-height:100vh;flex-direction:column}
+.app-header{background:var(--accent);color:#fff;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:100}
+.hname{font-size:14px;font-weight:700}
+.hsub{font-size:11px;opacity:.65;margin-top:1px}
+.logout-btn{font-size:11px;color:rgba(255,255,255,.65);background:none;border:1px solid rgba(255,255,255,.25);border-radius:5px;padding:4px 10px;cursor:pointer;font-family:var(--font)}
+/* ── tabs（ボトムナビ）── */
+.tabs{position:fixed;bottom:0;left:0;right:0;z-index:200;background:var(--card);border-top:1px solid var(--border);display:flex;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px)) 4px;gap:2px;box-shadow:0 -2px 12px rgba(0,0,0,.08)}
+.tab{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:6px 2px 5px;font-size:10.5px;font-weight:700;font-family:var(--font);background:none;border:none;color:var(--muted);cursor:pointer;transition:color .15s;min-width:0;position:relative}
+.tab-icon{font-size:24px;line-height:1;display:block;padding:4px 10px;border-radius:14px;transition:background .15s}
+.tab.active{color:var(--accent)}
+.tab.active .tab-icon{background:var(--al)}
+.tab span:last-child{letter-spacing:-.01em;margin-top:1px}
+.page{display:none;padding:14px;padding-bottom:100px}
+.page.active{display:block}
+/* ── その他ドロワー ── */
+#tab-drawer-overlay{display:none;position:fixed;inset:0;z-index:190;background:rgba(0,0,0,.4)}
+#tab-drawer-overlay.open{display:block}
+#tab-drawer{position:fixed;bottom:0;left:0;right:0;z-index:195;background:var(--card);border-radius:22px 22px 0 0;box-shadow:0 -6px 24px rgba(0,0,0,.18);padding:14px 16px calc(80px + env(safe-area-inset-bottom,0px));transform:translateY(100%);transition:transform .28s cubic-bezier(.4,0,.2,1)}
+#tab-drawer.open{transform:translateY(0)}
+.drawer-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.drawer-item{display:flex;flex-direction:column;align-items:center;gap:6px;padding:16px 8px 14px;border-radius:14px;background:var(--bg);border:1.5px solid var(--border);cursor:pointer;font-size:12px;font-weight:700;color:var(--text);font-family:var(--font);transition:all .15s}
+.drawer-item:active,.drawer-item.active{background:var(--al);border-color:var(--accent);color:var(--at)}
+.drawer-item .di{font-size:28px;line-height:1}
+.drawer-handle{width:44px;height:5px;background:var(--border);border-radius:3px;margin:0 auto 16px}
+/* ── clock ── */
+.clk-big{font-size:46px;font-weight:700;letter-spacing:-.03em;color:var(--accent);font-variant-numeric:tabular-nums;text-align:center;padding:6px 0 2px}
+.clk-date{font-size:13px;color:var(--muted);text-align:center;margin-bottom:4px}
+.clk-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px}
+.clk-btn{padding:15px;border:none;border-radius:8px;font-size:15px;font-weight:700;font-family:var(--font);cursor:pointer;transition:all .15s}
+.btn-in2{background:var(--accent);color:#fff}
+.btn-in2:hover{background:var(--at)}
+.btn-out2{background:var(--danger);color:#fff}
+.btn-out2:hover{background:#6e1a1a}
+.day-bar{font-size:12px;text-align:center;padding:6px 12px;border-radius:6px;margin-bottom:10px}
+.day-hol{background:var(--dl);color:var(--danger)}
+.day-work{background:var(--al);color:var(--at)}
+/* ── stats ── */
+.stats-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.stat{background:#f8f7f3;border-radius:8px;padding:11px}
+.slbl{font-size:11px;color:var(--muted);margin-bottom:2px}
+.sval{font-size:20px;font-weight:700}
+/* ── table ── */
+.tbl{width:100%;border-collapse:collapse;font-size:12px}
+.tbl th{font-size:10px;font-weight:700;color:var(--muted);letter-spacing:.07em;padding:5px 6px;border-bottom:1px solid var(--border);text-align:left}
+.tbl td{padding:7px 6px;border-bottom:1px solid #f0ede8;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+/* ── calendar ── */
+.cal-nav{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.cal-head{font-size:10px;font-weight:700;text-align:center;padding:3px 0;color:var(--muted)}
+.cal-cell{text-align:center;padding:6px 1px;font-size:12px;border-radius:5px;font-weight:500}
+.cc-today{background:var(--accent);color:#fff!important}
+.cc-hol{background:var(--dl);color:var(--danger)!important}
+.cc-work{background:var(--al);color:var(--at)!important}
+.cc-late{background:var(--wl);color:var(--warn)!important}
+.cc-sun{color:var(--danger)}
+.cc-sat{color:var(--info)}
+/* ── admin ── */
+.adm-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}
+.adm-stat{background:#f8f7f3;border-radius:8px;padding:12px}
+.filter-row{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center}
+.user-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f0ede8}
+.user-row:last-child{border-bottom:none}
+.user-avatar{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.leave-req-row{padding:10px 0;border-bottom:1px solid #f0ede8}
+.leave-req-row:last-child{border-bottom:none}
+/* ─── 日報入力カード ─── */
+.rpt-row-card{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;background:var(--bg)}
+.rpt-row-card select,.rpt-row-card .tree-picker{width:100%}
+.rpt-row-card .tree-picker-btn{max-width:none;width:100%}
+.rpt-row-card .tree-panel{width:100%;min-width:unset}
+/* スマホ向け：タップしやすい大きさ（16pxでiOSズーム防止） */
+.rpt-row-card .inp,.rpt-row-card .inp-sm{padding:12px 13px;font-size:16px;border-radius:8px}
+.rpt-row-card select.inp,.rpt-row-card select.inp-sm{padding:12px 13px;font-size:16px;border-radius:8px}
+.rpt-row-card .tree-picker-btn{padding:12px 13px;font-size:15px;line-height:1.4}
+.rpt-field-label{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px}
+/* ─── トースト通知 ─── */
+@keyframes fadeInUp{from{opacity:0;transform:translateX(-50%) translateY(12px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+/* ─── ツリーピッカー ─── */
+.tree-picker{position:relative;display:inline-block}
+.tree-picker-btn{text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:150px;padding:6px 10px;font-size:12px}
+.tree-panel{display:none;position:fixed;z-index:9999;min-width:210px;max-height:300px;overflow-y:auto;background:var(--bg);border:1px solid var(--border);border-radius:8px;box-shadow:0 6px 20px rgba(0,0,0,.18);padding:4px 0}
+.tree-picker.open .tree-panel{display:block}
+.tree-cat{display:flex;align-items:center;gap:6px;padding:8px 12px;cursor:pointer;font-size:12px;font-weight:700;color:var(--info);user-select:none}
+.tree-cat:hover{background:var(--al)}
+.tree-arr{font-size:10px;transition:transform .15s;display:inline-block;width:10px}
+.tree-children{padding:0}
+.tree-item{padding:6px 12px 6px 28px;cursor:pointer;font-size:12px;color:var(--text);border-bottom:1px solid var(--border)}
+.tree-item:last-child{border-bottom:none}
+.tree-item:hover{background:var(--al)}
+.tree-item.selected{color:var(--accent);font-weight:700;background:var(--al)}
+/* ── modal ── */
+.modal-wrap{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;align-items:center;justify-content:center;padding:16px}
+.modal-wrap.open{display:flex}
+.modal{background:var(--card);border-radius:var(--r);padding:20px;width:100%;max-width:360px;max-height:90vh;overflow-y:auto}
+.modal-title{font-size:15px;font-weight:700;margin-bottom:14px}
+.modal-footer{display:flex;gap:8px;margin-top:14px;justify-content:flex-end}
+/* ── 通知タブ ── */
+.notif-tab-btn{background:var(--bg);color:var(--muted);border-color:var(--border)}
+.active-notif-tab{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
+/* ── QR ── */
+.qr-box{display:flex;justify-content:center;padding:20px;background:#fff;border:1px solid var(--border);border-radius:8px;margin-bottom:10px}
+.url-box{background:#f8f7f3;border:1px solid var(--border);border-radius:6px;padding:10px;font-size:11px;color:var(--text);word-break:break-all;font-family:monospace;margin-bottom:8px}
+@media(min-width:480px){
+  .page{max-width:480px;margin:0 auto}
+  .tabs{left:50%;right:auto;width:480px;transform:translateX(-50%)}
+  #tab-drawer{left:50%;right:auto;width:480px;transform:translateX(-50%) translateY(100%)}
+  #tab-drawer.open{transform:translateX(-50%) translateY(0)}
+}
+</style>
+</head>
+<body>
+
+<!-- ローディング画面 -->
+<div id="loading-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:999">
+  <div style="font-size:22px;font-weight:700;color:var(--accent);margin-bottom:16px">蓮海工業株式会社</div>
+  <div style="font-size:13px;color:var(--muted)">データを読み込んでいます…</div>
+</div>
+
+<!-- ログイン画面 -->
+<div id="login-screen">
+  <div class="login-logo">HASUMI INDUSTRIAL CO., LTD.</div>
+  <div class="login-title">蓮海工業株式会社</div>
+  <div class="login-card">
+    <div id="login-user-sel">
+      <div class="fl" style="margin-bottom:6px" data-i18n="selectAccount">アカウントを選択</div>
+      <div id="user-list-login"></div>
+    </div>
+    <div id="login-pw-form" class="hidden">
+      <div id="login-selected-name" style="font-size:15px;font-weight:700;margin-bottom:14px"></div>
+      <div class="fl" data-i18n="password">パスワード</div>
+      <input class="inp" id="pw-input" type="password" data-i18n="pwPlaceholder" placeholder="パスワードを入力" oninput="checkPW()" style="margin-bottom:10px">
+      <div style="font-size:11px;color:var(--danger);min-height:16px" id="pw-err"></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn btn-sm" onclick="backToList()" style="flex:1" data-i18n="back">戻る</button>
+        <button class="btn btn-p btn-sm" id="pw-btn" onclick="doLogin()" disabled style="flex:2" data-i18n="login">ログイン</button>
+      </div>
+    </div>
+    <!-- 言語選択 -->
+    <div style="margin-top:16px;padding-top:12px;border-top:1px solid var(--border);display:flex;align-items:center;gap:8px">
+      <span style="font-size:11px;color:var(--muted)" data-i18n="langLabel">言語</span>
+      <select class="inp inp-sm" id="lang-select" onchange="setLang(this.value)" style="flex:1;font-size:12px;padding:5px 8px">
+        <option value="ja">日本語</option>
+        <option value="en">English</option>
+        <option value="vi">Tiếng Việt</option>
+        <option value="zh">中文</option>
+        <option value="pt">Português (BR)</option>
+        <option value="th">ภาษาไทย</option>
+        <option value="id">Bahasa Indonesia</option>
+        <option value="si">සිංහල</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- アプリ本体 -->
+<div id="app-screen">
+  <div class="app-header">
+    <div>
+      <div class="hname" id="header-name"></div>
+      <div class="hsub" id="header-sub"></div>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px">
+      <select id="lang-select-app" onchange="setLang(this.value)"
+        style="font-size:11px;background:rgba(255,255,255,.15);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:5px;padding:3px 6px;font-family:var(--font);cursor:pointer">
+        <option value="ja">🇯🇵 JP</option>
+        <option value="en">🇺🇸 EN</option>
+        <option value="vi">🇻🇳 VI</option>
+        <option value="zh">🇨🇳 ZH</option>
+        <option value="pt">🇧🇷 PT</option>
+        <option value="th">🇹🇭 TH</option>
+        <option value="id">🇮🇩 ID</option>
+        <option value="si">🇱🇰 SI</option>
+      </select>
+      <button class="logout-btn" onclick="doLogout()" data-i18n="logout">ログアウト</button>
+    </div>
+  </div>
+  <div class="tabs" id="main-tabs"></div>
+  <div id="tab-drawer-overlay" onclick="closeTabDrawer()"></div>
+  <div id="tab-drawer">
+    <div class="drawer-handle"></div>
+    <div class="drawer-grid" id="tab-drawer-grid"></div>
+  </div>
+
+  <!-- 打刻 -->
+  <div class="page" id="page-打刻">
+    <div class="card">
+      <div class="clk-date" id="clk-date"></div>
+      <div class="clk-big" id="clk-time">--:--:--</div>
+      <div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:10px">
+        <span class="badge b-off" id="status-badge">未出勤</span>
+        <span class="badge b-late hidden" id="late-badge">遅刻</span>
+      </div>
+      <div class="day-bar day-work" id="day-bar"></div>
+      <div class="clk-btns">
+        <button class="clk-btn btn-in2" id="btn-in" onclick="clockIn()">出　勤</button>
+        <button class="clk-btn btn-out2" id="btn-out" onclick="clockOut()" disabled>退　勤</button>
+      </div>
+      <div style="font-size:12px;color:var(--muted);text-align:center;min-height:18px" id="clk-info"></div>
+    </div>
+    <div class="stats-grid">
+      <div class="stat"><div class="slbl">出勤日数（締め期間）</div><div class="sval" id="s-days">-</div></div>
+      <div class="stat"><div class="slbl">所定労働時間</div><div class="sval" id="s-sched">-</div></div>
+      <div class="stat"><div class="slbl">残業時間（30分単位）</div><div class="sval" id="s-ot">0.0h</div></div>
+      <div class="stat"><div class="slbl" id="s-leave-lbl">有給残日数</div><div class="sval" id="s-leave">—</div></div>
+    </div>
+  </div>
+
+  <!-- 履歴 -->
+  <div class="page" id="page-履歴">
+    <!-- 期間フィルター -->
+    <div style="display:flex;gap:6px;align-items:center;margin-bottom:10px;flex-wrap:wrap">
+      <select class="inp inp-sm" id="hist-year" style="flex:1;min-width:80px" onchange="renderHistTable()"></select>
+      <select class="inp inp-sm" id="hist-month" style="flex:1;min-width:70px" onchange="renderHistTable()"></select>
+      <span style="font-size:10px;color:var(--muted);white-space:nowrap">締め：21日〜20日</span>
+    </div>
+    <!-- サマリー -->
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px" id="hist-summary"></div>
+    <!-- テーブル -->
+    <div class="card" style="padding:0;overflow:hidden">
+      <div style="overflow-x:auto">
+        <table class="tbl" style="margin:0">
+          <thead><tr>
+            <th style="white-space:nowrap">日付</th>
+            <th style="white-space:nowrap">出勤</th>
+            <th style="white-space:nowrap">退勤</th>
+            <th style="white-space:nowrap">実働</th>
+            <th style="white-space:nowrap">残業</th>
+            <th style="white-space:nowrap">区分</th>
+          </tr></thead>
+          <tbody id="hist-body"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- カレンダー -->
+  <div class="page" id="page-カレンダー">
+    <div class="cal-nav">
+      <button class="btn btn-sm" onclick="prevM()">◀</button>
+      <div style="font-size:15px;font-weight:700" id="cal-title"></div>
+      <button class="btn btn-sm" onclick="nextM()">▶</button>
+    </div>
+    <div class="card">
+      <div class="cal-grid" id="cal-head"></div>
+      <div class="cal-grid" id="cal-body" style="margin-top:3px"></div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:8px;font-size:11px;color:var(--muted)">
+        <span>■<span style="color:var(--accent)"> 今日</span></span>
+        <span>■<span style="color:var(--danger)"> 休日</span></span>
+        <span>■<span style="color:var(--at)"> 出勤済</span></span>
+        <span>■<span style="color:var(--warn)"> 遅刻</span></span>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--danger);line-height:1.9;margin-top:4px" id="cal-hols"></div>
+  </div>
+
+  <!-- 申請 -->
+  <div class="page" id="page-申請">
+    <div id="leave-contractor-note" class="hidden" style="background:var(--wl);border-radius:8px;padding:12px;font-size:12px;color:var(--warn);margin-bottom:12px;line-height:1.7"></div>
+    <div class="card" id="leave-form-card">
+      <div class="sec-title">新規申請</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px">
+        <div><div class="fl">種別</div><select class="inp inp-sm" id="lv-type" style="padding:9px 10px"></select></div>
+        <div><div class="fl">日付</div><input class="inp inp-sm" type="date" id="lv-date"></div>
+      </div>
+      <div style="margin-bottom:10px"><div class="fl">備考（任意）</div><input class="inp inp-sm" id="lv-note" placeholder="理由・補足など" style="margin-top:4px"></div>
+      <button class="btn btn-p" onclick="applyLeave()" style="width:100%">申請する</button>
+      <div style="font-size:12px;color:var(--danger);margin-top:6px;min-height:16px" id="lv-err"></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">申請履歴</div>
+      <div id="leave-list"></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">打刻修正届</div>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:10px">
+        <div><div class="fl">対象日</div><input class="inp inp-sm" type="date" id="cor-date" style="margin-top:4px"></div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+          <div><div class="fl">修正後 出勤時刻</div><input class="inp inp-sm" type="time" id="cor-in" style="margin-top:4px"></div>
+          <div><div class="fl">修正後 退勤時刻</div><input class="inp inp-sm" type="time" id="cor-out" style="margin-top:4px"></div>
+        </div>
+        <div><div class="fl">修正理由</div><input class="inp inp-sm" id="cor-reason" placeholder="例：打刻忘れ、機器不具合など" style="margin-top:4px"></div>
+      </div>
+      <button class="btn btn-p" onclick="submitCorrection()" style="width:100%">申請する</button>
+      <div style="font-size:12px;color:var(--danger);margin-top:6px;min-height:16px" id="cor-err"></div>
+      <div class="sec-title" style="margin-top:14px">修正届履歴</div>
+      <div id="correction-list"></div>
+    </div>
+  </div>
+
+  <!-- 日報（社員・外注用） -->
+  <div class="page" id="page-日報">
+    <div class="card">
+      <div class="sec-title" data-i18n="rptTitle">日報を書く</div>
+      <div style="margin-bottom:10px"><div class="fl" data-i18n="rptDate">日付</div><input class="inp inp-sm" type="date" id="rpt-date" style="margin-top:4px"></div>
+      <div id="rpt-rows"></div>
+      <button class="btn btn-sm" onclick="addRptRow()" style="margin-top:8px;width:100%" data-i18n="rptAddRow">＋ 行を追加</button>
+      <div style="margin-top:10px">
+        <div class="fl" style="margin-bottom:4px" data-i18n="rptNote">備考</div>
+        <textarea class="inp" id="rpt-note" rows="2" placeholder="連絡事項・特記事項など" data-i18n="rptNotePh" style="resize:vertical;font-size:13px"></textarea>
+      </div>
+      <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="rpt-err"></div>
+      <button class="btn btn-p" onclick="submitDailyReport()" style="width:100%;margin-top:6px" data-i18n="rptSubmit">送信する</button>
+    </div>
+    <div class="card">
+      <div class="sec-title" data-i18n="rptHistory">過去の日報</div>
+      <div id="rpt-history"></div>
+    </div>
+  </div>
+
+  <!-- 日報閲覧（管理者用） -->
+  <div class="page" id="page-日報閲覧">
+    <div class="filter-row">
+      <select class="inp inp-sm" id="rpt-admin-user" onchange="renderReportAdmin()" style="width:auto;max-width:140px"></select>
+      <select class="inp inp-sm" id="rpt-admin-year" onchange="renderReportAdmin()" style="width:auto"></select>
+      <select class="inp inp-sm" id="rpt-admin-month" onchange="renderReportAdmin()" style="width:auto"></select>
+      <select class="inp inp-sm" id="rpt-admin-yukisaki" onchange="renderReportAdmin()" style="width:auto">
+        <option value="">全工場</option>
+        <option>富士宮工場</option>
+        <option>SD工房</option>
+        <option>FUJIYAMAヤード</option>
+        <option>新富士工場</option>
+        <option>その他</option>
+      </select>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px;align-items:center">
+      <span class="appr-tab active" data-appr="all" onclick="switchApprTab(this)">すべて</span>
+      <span class="appr-tab" data-appr="pending" onclick="switchApprTab(this)">⬜ 未確認</span>
+      <span class="appr-tab" data-appr="approved" onclick="switchApprTab(this)">✅ OK済み</span>
+      <span class="appr-tab" data-appr="rejected" onclick="switchApprTab(this)">🔄 再提出</span>
+      <span style="flex:1"></span>
+      <button class="btn btn-sm" style="background:var(--il);color:var(--info);border-color:var(--info)" onclick="exportToExcel()">📥 Excelに書き込む</button>
+    </div>
+    <div id="rpt-admin-list"></div>
+  </div>
+
+  <!-- QR/URL -->
+  <div class="page" id="page-QR">
+    <div class="card">
+      <div class="sec-title">スマホ打刻用 QRコード / URL</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:12px;line-height:1.7">このQRコードを印刷して社内に掲示、またはURLを共有すると全員がスマートフォンから打刻できます。</div>
+      <!-- URL警告エリア -->
+      <div id="qr-warn" class="hidden" style="background:var(--wl);border-radius:8px;padding:12px;font-size:12px;color:var(--warn);margin-bottom:12px;line-height:1.8"></div>
+      <!-- カスタムURL入力 -->
+      <div id="qr-custom-wrap" style="margin-bottom:10px">
+        <div class="fl" style="margin-bottom:4px">アクセスURL <span style="font-weight:400;color:var(--muted)">（スマホから開けるURLを入力）</span></div>
+        <div style="display:flex;gap:6px">
+          <input class="inp inp-sm" id="qr-custom-url" placeholder="https://example.com/demo.html" style="flex:1">
+          <button class="btn btn-p btn-sm" onclick="applyCustomQR()">更新</button>
+        </div>
+      </div>
+      <div class="qr-box"><div id="qr-canvas"></div></div>
+      <div class="url-box" id="qr-url"></div>
+      <button class="btn" onclick="copyURL()" style="width:100%" id="copy-btn">URLをコピー</button>
+      <div style="font-size:11px;color:var(--muted);margin-top:10px;line-height:1.7">※このQRコードを印刷して社内に掲示してください。<br>※データはFirebaseに保存され全端末でリアルタイム共有されます。</div>
+    </div>
+  </div>
+
+  <!-- お知らせ（社員・外注・管理者共用） -->
+  <div class="page" id="page-お知らせ">
+
+    <!-- 管理者のみ: メッセージ送信フォーム -->
+    <div class="card" id="admin-msg-card" style="display:none;margin-bottom:12px">
+      <div class="sec-title">メッセージを送る</div>
+      <div style="margin-bottom:8px">
+        <div class="fl" style="margin-bottom:4px">宛先</div>
+        <select class="inp inp-sm" id="msg-to">
+          <option value="__all__">全員</option>
+        </select>
+      </div>
+      <div style="margin-bottom:8px">
+        <div class="fl" style="margin-bottom:4px">メッセージ</div>
+        <textarea class="inp" id="msg-body" rows="3" placeholder="内容を入力してください" style="resize:vertical;font-size:13px"></textarea>
+      </div>
+      <div style="font-size:12px;color:var(--danger);min-height:16px;margin-bottom:6px" id="msg-err"></div>
+      <button class="btn btn-p" onclick="sendAdminMessage()" style="width:100%">送信する</button>
+    </div>
+
+    <!-- 通知一覧 -->
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-title" style="margin-bottom:0">お知らせ</div>
+        <button class="btn btn-sm" onclick="markAllNotifRead()">全て既読</button>
+      </div>
+      <!-- 通知カテゴリタブ -->
+      <div style="display:flex;gap:6px;margin-bottom:12px;border-bottom:1px solid var(--border);padding-bottom:8px" id="notif-tabs">
+        <button class="btn btn-sm notif-tab-btn active-notif-tab" data-notif-tab="all"
+          onclick="switchNotifTab('all')"
+          style="border-radius:20px;font-size:12px;padding:4px 14px" data-i18n="notifAll">すべて</button>
+        <button class="btn btn-sm notif-tab-btn" data-notif-tab="leave"
+          onclick="switchNotifTab('leave')"
+          style="border-radius:20px;font-size:12px;padding:4px 14px" data-i18n="notifLeave">有給</button>
+        <button class="btn btn-sm notif-tab-btn" data-notif-tab="message"
+          onclick="switchNotifTab('message')"
+          style="border-radius:20px;font-size:12px;padding:4px 14px" data-i18n="notifMessage">メッセージ</button>
+      </div>
+      <div id="notif-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者: マスター管理 -->
+  <div class="page" id="page-マスター">
+    <div class="card" style="margin-bottom:8px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-title" style="margin-bottom:0">物件マスター</div>
+        <button class="btn btn-p btn-sm" onclick="openAddBukken()">＋ 物件追加</button>
+      </div>
+      <div id="bukken-list"></div>
+    </div>
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+        <div class="sec-title" style="margin-bottom:0">作業内容マスター</div>
+        <button class="btn btn-p btn-sm" onclick="openAddSagyo()">＋ 追加</button>
+      </div>
+      <div id="sagyo-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者: ダッシュボード -->
+  <div class="page" id="page-管理">
+    <div class="adm-grid">
+      <div class="adm-stat"><div class="slbl">総ユーザー数</div><div class="sval" id="a-total">-</div></div>
+      <div class="adm-stat"><div class="slbl">本日出勤</div><div class="sval" id="a-today">-</div></div>
+      <div class="adm-stat"><div class="slbl">承認待ち休暇</div><div class="sval" id="a-pend">-</div></div>
+    </div>
+    <div class="card">
+      <div class="sec-title">本日の出退勤状況</div>
+      <div id="today-status-list"></div>
+    </div>
+    <div class="card" style="border-color:var(--danger);margin-top:8px">
+      <div class="sec-title" style="color:var(--danger)">データ管理</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:10px;line-height:1.7">打刻履歴・申請・日報・お知らせのデータを一括削除します。ユーザー情報・物件・作業内容マスターは削除されません。</div>
+      <button class="btn btn-d btn-sm" onclick="resetAllData()">打刻・日報・お知らせを全削除</button>
+    </div>
+  </div>
+
+  <!-- 管理者: 打刻修正承認 -->
+  <div class="page" id="page-修正承認">
+    <div class="filter-row">
+      <select class="inp inp-sm" id="cor-filter" onchange="renderCorrectionAdmin()" style="width:auto">
+        <option value="all">すべて</option>
+        <option value="pending">承認待ち</option>
+        <option value="approved">承認済</option>
+        <option value="rejected">却下</option>
+      </select>
+    </div>
+    <div class="card">
+      <div id="correction-admin-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者: ユーザー管理 -->
+  <div class="page" id="page-社員管理">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
+      <div class="sec-title" style="margin-bottom:0">登録ユーザー一覧</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn btn-sm" style="background:var(--wl);color:var(--warn);border-color:var(--warn)" onclick="initLeaveData()">有給一括設定</button>
+        <button class="btn btn-p btn-sm" onclick="openAddUser()">＋ 追加</button>
+      </div>
+    </div>
+    <div class="card">
+      <div id="user-mgmt-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者: 休暇承認 -->
+  <div class="page" id="page-休暇承認">
+    <div class="filter-row">
+      <select class="inp inp-sm" id="lv-filter" onchange="renderLeaveApproval()" style="width:auto">
+        <option value="all">すべて</option>
+        <option value="pending">承認待ち</option>
+        <option value="approved">承認済</option>
+        <option value="rejected">却下</option>
+      </select>
+    </div>
+    <div class="card">
+      <div id="leave-approval-list"></div>
+    </div>
+  </div>
+
+  <!-- 管理者: 月次集計 -->
+  <div class="page" id="page-月次集計">
+    <div class="filter-row">
+      <select class="inp inp-sm" id="agg-year" onchange="renderAgg()" style="width:auto"></select>
+      <select class="inp inp-sm" id="agg-month" onchange="renderAgg()" style="width:auto"></select>
+      <button class="btn btn-sm" onclick="exportCSV()">CSV出力</button>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table class="tbl" id="agg-table">
+        <thead><tr><th>氏名</th><th>区分</th><th>出勤日</th><th>所定時間</th><th>残業</th><th>有給取得</th><th>欠勤</th></tr></thead>
+        <tbody id="agg-body"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 管理者: 打刻履歴 -->
+  <div class="page" id="page-打刻履歴">
+    <div class="filter-row">
+      <select class="inp inp-sm" id="hist-user" onchange="renderAttHistory()" style="width:auto;max-width:120px"></select>
+      <select class="inp inp-sm" id="hist-year" onchange="renderAttHistory()" style="width:auto"></select>
+      <select class="inp inp-sm" id="hist-month" onchange="renderAttHistory()" style="width:auto"></select>
+    </div>
+    <div class="card" style="overflow-x:auto">
+      <table class="tbl">
+        <thead><tr><th>氏名</th><th>日付</th><th>出勤</th><th>退勤</th><th>実働</th><th>種別</th><th>位置</th><th></th></tr></thead>
+        <tbody id="att-hist-body"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- 打刻種別確認モーダル -->
+<div class="modal-wrap" id="type-modal">
+  <div class="modal">
+    <div class="modal-title">退勤 — 打刻種別の確認</div>
+    <div style="font-size:12px;color:var(--muted);margin-bottom:12px" id="type-modal-info"></div>
+    <div class="fl">種別</div>
+    <select class="inp inp-sm" id="type-select" style="margin-top:4px">
+      <option value="出勤">出勤</option>
+      <option value="遅刻">遅刻</option>
+      <option value="早退">早退</option>
+      <option value="中抜け">中抜け</option>
+      <option value="休日出勤">休日出勤</option>
+      <option value="その他">その他</option>
+    </select>
+    <div class="modal-footer">
+      <button class="btn btn-p btn-sm" onclick="confirmClockOut()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 日報編集モーダル -->
+<div class="modal-wrap" id="rpt-edit-modal">
+  <div class="modal" style="max-width:500px">
+    <div class="modal-title" data-i18n="rptEditTitle">日報を編集</div>
+    <div style="font-size:12px;font-weight:700;color:var(--accent);margin-bottom:10px" id="rpt-edit-date"></div>
+    <div id="rpt-edit-rows"></div>
+    <button class="btn btn-sm" onclick="addRptEditRow()" style="margin-top:8px;width:100%" data-i18n="rptAddRow">＋ 行を追加</button>
+    <div style="margin-top:10px">
+      <div class="fl" style="margin-bottom:4px" data-i18n="rptNote">備考</div>
+      <textarea class="inp" id="rpt-edit-note" rows="2" placeholder="連絡事項・特記事項など" data-i18n="rptNotePh" style="resize:vertical;font-size:13px"></textarea>
+    </div>
+    <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="rpt-edit-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeModal('rpt-edit-modal')" data-i18n="rptCancel">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="saveEditReport()" data-i18n="rptSave">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 物件マスター追加/編集モーダル -->
+<div class="modal-wrap" id="bukken-modal">
+  <div class="modal">
+    <div class="modal-title" id="bukken-modal-title">物件追加</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="fl">物件番号</div><input class="inp inp-sm" id="bk-no" placeholder="例：108" style="margin-top:4px"></div>
+      <div><div class="fl">物件名</div><input class="inp inp-sm" id="bk-name" placeholder="例：DPL久喜宮代" style="margin-top:4px"></div>
+    </div>
+    <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="bk-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeModal('bukken-modal')">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="saveBukken()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 作業内容マスター追加/編集モーダル -->
+<div class="modal-wrap" id="sagyo-modal">
+  <div class="modal">
+    <div class="modal-title" id="sagyo-modal-title">作業内容追加</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="fl">カテゴリ</div><input class="inp inp-sm" id="sg-cat" placeholder="例：鉄骨工事" style="margin-top:4px" list="sg-cat-list"><datalist id="sg-cat-list"></datalist></div>
+      <div><div class="fl">記号</div><input class="inp inp-sm" id="sg-code" placeholder="例：A1" style="margin-top:4px"></div>
+      <div><div class="fl">表示名</div><input class="inp inp-sm" id="sg-label" placeholder="例：PL・金物関係 荷降ろし" style="margin-top:4px"></div>
+    </div>
+    <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="sg-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeModal('sagyo-modal')">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="saveSagyo()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- 打刻編集モーダル（管理者用） -->
+<div class="modal-wrap" id="att-edit-modal">
+  <div class="modal">
+    <div class="modal-title">打刻修正</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="fl">氏名</div><div id="att-edit-name" style="font-size:13px;padding:6px 0;font-weight:600"></div></div>
+      <div><div class="fl">日付</div><input class="inp inp-sm" id="att-edit-date" type="date"></div>
+      <div><div class="fl">出勤時刻</div><input class="inp inp-sm" id="att-edit-in" type="time"></div>
+      <div><div class="fl">退勤時刻（未退勤の場合は空欄）</div><input class="inp inp-sm" id="att-edit-out" type="time"></div>
+      <div><div class="fl">種別</div>
+        <select class="inp inp-sm" id="att-edit-type">
+          <option value="出勤">出勤</option>
+          <option value="遅刻">遅刻</option>
+          <option value="早退">早退</option>
+          <option value="中抜け">中抜け</option>
+          <option value="休日出勤">休日出勤</option>
+          <option value="欠勤">欠勤</option>
+          <option value="その他">その他</option>
+        </select>
+      </div>
+    </div>
+    <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="att-edit-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeModal('att-edit-modal')">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="saveEditAtt()">保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- ユーザー追加/編集モーダル -->
+<div class="modal-wrap" id="user-modal">
+  <div class="modal">
+    <div class="modal-title" id="user-modal-title">社員追加</div>
+    <div style="display:flex;flex-direction:column;gap:10px">
+      <div><div class="fl">社員番号</div><input class="inp inp-sm" id="m-empno" placeholder="例：E001"></div>
+      <div><div class="fl">氏名</div><input class="inp inp-sm" id="m-name" placeholder="山田 太郎"></div>
+      <div><div class="fl">パスワード</div><input class="inp inp-sm" id="m-pw" type="password" placeholder="パスワード"></div>
+      <div><div class="fl">区分</div>
+        <select class="inp inp-sm" id="m-type">
+          <option value="employee">社員</option>
+          <option value="contractor">外注</option>
+          <option value="admin">管理者</option>
+        </select>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+        <div><div class="fl">有給付与日数（起算時）</div><input class="inp inp-sm" id="m-grant" type="number" value="10" min="0" max="40" step="0.5"></div>
+        <div><div class="fl">有給残日数（現在）</div><input class="inp inp-sm" id="m-leave" type="number" value="10" min="0" max="40" step="0.5"></div>
+      </div>
+      <div><div class="fl">有給有効期限（付与日から2年・社員のみ）</div><input class="inp inp-sm" id="m-lexpiry" type="date" style="margin-top:4px"></div>
+      <div style="border-top:1px solid var(--border);padding-top:10px;margin-top:2px">
+        <div class="fl" style="margin-bottom:8px;color:var(--info)">▸ 変形労働設定（任意）</div>
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+          <div><div class="fl">出勤時刻</div><input class="inp inp-sm" id="m-cstart" type="time" placeholder="08:00" style="margin-top:4px"></div>
+          <div><div class="fl">退勤時刻</div><input class="inp inp-sm" id="m-cend" type="time" placeholder="17:00" style="margin-top:4px"></div>
+        </div>
+        <div style="margin-bottom:8px"><div class="fl">所定時間（h）</div><input class="inp inp-sm" id="m-cph" type="number" min="0" max="12" step="0.5" placeholder="空欄=区分の標準値" style="margin-top:4px"></div>
+        <div><div class="fl" style="margin-bottom:6px">定休曜日（複数可）</div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-0" value="0">日</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-1" value="1">月</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-2" value="2">火</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-3" value="3">水</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-4" value="4">木</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-5" value="5">金</label>
+            <label style="display:flex;align-items:center;gap:3px;font-size:12px;cursor:pointer"><input type="checkbox" id="m-cdoff-6" value="6">土</label>
+          </div>
+        </div>
+      </div>
+    </div>
+      <div style="margin-top:8px">
+        <label style="display:flex;align-items:center;gap:6px;font-size:12px;cursor:pointer">
+          <input type="checkbox" id="m-pin-bottom">
+          <span>ログイン名簿の一番下に固定</span>
+        </label>
+      </div>
+    <div style="font-size:11px;color:var(--danger);min-height:16px;margin-top:6px" id="m-err"></div>
+    <div class="modal-footer">
+      <button class="btn btn-sm" onclick="closeModal('user-modal')">キャンセル</button>
+      <button class="btn btn-p btn-sm" onclick="saveUser()">保存</button>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.12.1/firebase-app.js";
+import { getFirestore, collection, doc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where }
+  from "https://www.gstatic.com/firebasejs/12.12.1/firebase-firestore.js";
+
+// ─── Firebase 初期化 ───
+const firebaseConfig = {
+  apiKey: "AIzaSyB0nHbSmHZVS1sonCBm5mWzY7yft1FEaZY",
+  authDomain: "hasumi-kintai.firebaseapp.com",
+  projectId: "hasumi-kintai",
+  storageBucket: "hasumi-kintai.firebasestorage.app",
+  messagingSenderId: "104173052762",
+  appId: "1:104173052762:web:06fea35708b62ba8e24963"
+};
+const fbApp = initializeApp(firebaseConfig);
+const fsdb  = getFirestore(fbApp);
+const colUsers   = collection(fsdb,'users');
+const colAtt     = collection(fsdb,'attendance');
+const colLeave   = collection(fsdb,'leaves');
+const colReports = collection(fsdb,'reports');
+const colBukken  = collection(fsdb,'bukken');
+const colSagyo   = collection(fsdb,'sagyo');
+const colNotifs       = collection(fsdb,'notifications');
+const colCorrections  = collection(fsdb,'corrections');
+
+// ─── インメモリキャッシュ ───
+const CACHE = { users:[], att:[], leave:[], reports:[], bukken:[], sagyo:[], notif:[], corrections:[] };
+
+// ─── DB ファサード（読み取り：同期、書き込み：非同期）───
+const DB = {
+  get users()    { return CACHE.users; },
+  get allAtt()   { return CACHE.att;   },
+  get allLeave() { return CACHE.leave; },
+  get allReports(){ return CACHE.reports; },
+  get allBukken() { return CACHE.bukken;  },
+  get allSagyo()  { return CACHE.sagyo;   },
+  attOf(uid)     { return CACHE.att.filter(r=>r.uid===uid); },
+  leaveOf(uid)   { return CACHE.leave.filter(r=>r.uid===uid); },
+  reportsOf(uid) { return CACHE.reports.filter(r=>r.uid===uid); },
+  findUser(id)   { return CACHE.users.find(u=>u.id===id); },
+
+  async addAtt(rec){
+    await setDoc(doc(fsdb,'attendance',rec.id), rec);
+  },
+  async updateAtt(id,patch){
+    const i=CACHE.att.findIndex(r=>r.id===id);
+    if(i>=0) Object.assign(CACHE.att[i],patch);
+    await updateDoc(doc(fsdb,'attendance',id),patch);
+  },
+  async addLeave(rec){
+    await setDoc(doc(fsdb,'leaves',rec.id), rec);
+  },
+  async updateLeave(id,patch){
+    const i=CACHE.leave.findIndex(r=>r.id===id);
+    if(i>=0) Object.assign(CACHE.leave[i],patch);
+    await updateDoc(doc(fsdb,'leaves',id),patch);
+  },
+  async addBukken(rec){ await setDoc(doc(fsdb,'bukken',rec.id),rec); CACHE.bukken.push(rec); },
+  async updateBukken(id,patch){
+    const i=CACHE.bukken.findIndex(b=>b.id===id);
+    if(i>=0) Object.assign(CACHE.bukken[i],patch);
+    await updateDoc(doc(fsdb,'bukken',id),patch);
+  },
+  async deleteBukken(id){
+    await deleteDoc(doc(fsdb,'bukken',id));
+    CACHE.bukken=CACHE.bukken.filter(b=>b.id!==id);
+  },
+  async addSagyo(rec){ await setDoc(doc(fsdb,'sagyo',rec.id),rec); CACHE.sagyo.push(rec); },
+  async updateSagyo(id,patch){
+    const i=CACHE.sagyo.findIndex(s=>s.id===id);
+    if(i>=0) Object.assign(CACHE.sagyo[i],patch);
+    await updateDoc(doc(fsdb,'sagyo',id),patch);
+  },
+  async deleteSagyo(id){
+    await deleteDoc(doc(fsdb,'sagyo',id));
+    CACHE.sagyo=CACHE.sagyo.filter(s=>s.id!==id);
+  },
+  async addReport(rec){
+    await setDoc(doc(fsdb,'reports',rec.id), rec);
+    CACHE.reports.push(rec);
+  },
+  async updateReport(id,patch){
+    const i=CACHE.reports.findIndex(r=>r.id===id);
+    if(i>=0) Object.assign(CACHE.reports[i],patch);
+    await updateDoc(doc(fsdb,'reports',id),patch);
+  },
+  async deleteReport(id){
+    await deleteDoc(doc(fsdb,'reports',id));
+    CACHE.reports = CACHE.reports.filter(r=>r.id!==id);
+  },
+  async updateUser(uid,patch){
+    const i=CACHE.users.findIndex(u=>u.id===uid);
+    if(i>=0) Object.assign(CACHE.users[i],patch);
+    await updateDoc(doc(fsdb,'users',uid),patch);
+  },
+  async addUser(user){
+    await setDoc(doc(fsdb,'users',user.id),user);
+    CACHE.users.push(user);
+  },
+  async deleteUserData(uid){
+    await deleteDoc(doc(fsdb,'users',uid));
+    CACHE.users = CACHE.users.filter(u=>u.id!==uid);
+    const attDel=CACHE.att.filter(r=>r.uid===uid);
+    for(const r of attDel) await deleteDoc(doc(fsdb,'attendance',r.id));
+    CACHE.att = CACHE.att.filter(r=>r.uid!==uid);
+    const lvDel=CACHE.leave.filter(r=>r.uid===uid);
+    for(const r of lvDel) await deleteDoc(doc(fsdb,'leaves',r.id));
+    CACHE.leave = CACHE.leave.filter(r=>r.uid!==uid);
+    const rpDel=CACHE.reports.filter(r=>r.uid===uid);
+    for(const r of rpDel) await deleteDoc(doc(fsdb,'reports',r.id));
+    CACHE.reports = CACHE.reports.filter(r=>r.uid!==uid);
+    const nfDel=CACHE.notif.filter(n=>n.toUid===uid||n.fromUid===uid);
+    for(const n of nfDel) await deleteDoc(doc(fsdb,'notifications',n.id));
+    CACHE.notif = CACHE.notif.filter(n=>n.toUid!==uid&&n.fromUid!==uid);
+  },
+  async addNotif(rec){
+    await setDoc(doc(fsdb,'notifications',rec.id),rec);
+    CACHE.notif.push(rec);
+  },
+  async readNotif(id){
+    const i=CACHE.notif.findIndex(n=>n.id===id);
+    if(i>=0) CACHE.notif[i].read=true;
+    await updateDoc(doc(fsdb,'notifications',id),{read:true});
+  },
+  async readAllNotif(toUid){
+    const unread=CACHE.notif.filter(n=>n.toUid===toUid&&!n.read);
+    for(const n of unread){
+      n.read=true;
+      await updateDoc(doc(fsdb,'notifications',n.id),{read:true});
+    }
+  },
+  async addCorrection(rec){
+    await setDoc(doc(fsdb,'corrections',rec.id),rec);
+    CACHE.corrections.push(rec);
+  },
+  async updateCorrection(id,patch){
+    const i=CACHE.corrections.findIndex(c=>c.id===id);
+    if(i>=0) Object.assign(CACHE.corrections[i],patch);
+    await updateDoc(doc(fsdb,'corrections',id),patch);
+  }
+};
+
+// ═══════════════════════════════════════════════
+//  定数・マスターデータ
+// ═══════════════════════════════════════════════
+const CLOSE_DAY = 20;
+// 休憩分数：社員/管理者=90分、外注=75分、customBreakMin設定時はそれを優先
+function breakMin(uOrType){
+  if(uOrType && typeof uOrType==='object'){
+    if(uOrType.customBreakMin!=null) return uOrType.customBreakMin;
+    return uOrType.type==='contractor'?75:90;
+  }
+  return uOrType==='contractor'?75:90;
+}
+// uOrType: ユーザーオブジェクト or 'employee'/'contractor' 文字列
+function prescribedH(uOrType){
+  if(uOrType && typeof uOrType==='object'){
+    if(uOrType.customPrescribedH) return uOrType.customPrescribedH;
+    return uOrType.type==='contractor'?8.0:7.5;
+  }
+  return uOrType==='contractor'?8.0:7.5;
+}
+// 実働時間を30分単位（切り捨て）に丸める
+function roundH(h){ return Math.floor(h*2)/2; }
+function calcOT(h,uOrType){ const ov=Math.max(0,h-prescribedH(uOrType)); return Math.floor(ov/0.5)*0.5; }
+function nid(){return 'notif_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+const HOLIDAYS = new Set([
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20',
+  '2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-07','2026-10-12','2026-11-03','2026-11-23',
+  '2027-01-01','2027-01-11'
+]);
+const HOL_NAMES = {
+  '2026-01-01':'元旦','2026-01-12':'成人の日','2026-02-11':'建国記念の日',
+  '2026-02-23':'天皇誕生日','2026-03-20':'春分の日','2026-04-29':'昭和の日',
+  '2026-05-03':'憲法記念日','2026-05-04':'みどりの日','2026-05-05':'こどもの日',
+  '2026-05-06':'振替休日','2026-07-20':'海の日','2026-08-11':'山の日',
+  '2026-09-21':'敬老の日','2026-09-22':'振替休日','2026-09-23':'秋分の日',
+  '2026-10-07':'蓮海工業設立記念日','2026-10-12':'スポーツの日',
+  '2026-11-03':'文化の日','2026-11-23':'勤労感謝の日',
+  '2027-01-01':'元旦','2027-01-11':'成人の日'
+};
+
+// 初期データ投入（Firestoreが空の場合のみ）
+async function seedInitialData(){
+  const users=[
+    {id:'admin',empNo:'',name:'管理者',pw:'admin123',type:'admin',leaveDays:0},
+    {id:'u001',empNo:'E001',name:'山田 太郎',pw:'1234',type:'employee',leaveDays:10},
+    {id:'u002',empNo:'E002',name:'佐藤 花子',pw:'1234',type:'employee',leaveDays:12},
+    {id:'u003',empNo:'C001',name:'田中 建二',pw:'1234',type:'contractor',leaveDays:0},
+  ];
+  for(const u of users) await setDoc(doc(fsdb,'users',u.id),u);
+
+  const att=[
+    {id:'a001',uid:'u001',date:'2026-04-20',in:'08:58',out:'17:10',actual:8.2,ot:0.5,type:'出勤',inLoc:null,outLoc:null},
+    {id:'a002',uid:'u001',date:'2026-04-17',in:'09:01',out:'18:30',actual:9.0,ot:1.5,type:'遅刻',inLoc:null,outLoc:null},
+    {id:'a003',uid:'u001',date:'2026-04-16',in:'08:55',out:'17:00',actual:7.5,ot:0.0,type:'出勤',inLoc:null,outLoc:null},
+    {id:'a004',uid:'u002',date:'2026-04-20',in:'08:50',out:'17:00',actual:7.5,ot:0.0,type:'出勤',inLoc:null,outLoc:null},
+    {id:'a005',uid:'u002',date:'2026-04-17',in:'08:59',out:'17:30',actual:8.0,ot:0.5,type:'出勤',inLoc:null,outLoc:null},
+    {id:'a006',uid:'u003',date:'2026-04-20',in:'08:58',out:'17:02',actual:7.5,ot:0.0,type:'出勤',inLoc:null,outLoc:null},
+  ];
+  for(const a of att) await setDoc(doc(fsdb,'attendance',a.id),a);
+
+  const leave=[
+    {id:'lv001',uid:'u001',type:'有給休暇',date:'2026-05-01',status:'承認待ち',deduct:1,appliedAt:'2026-04-25'},
+    {id:'lv002',uid:'u002',type:'半日休暇（午前）',date:'2026-04-28',status:'承認済',deduct:0.5,appliedAt:'2026-04-22'},
+  ];
+  for(const l of leave) await setDoc(doc(fsdb,'leaves',l.id),l);
+}
+
+// ═══════════════════════════════════════════════
+//  ユーティリティ
+// ═══════════════════════════════════════════════
+const f2=n=>String(n).padStart(2,'0');
+const dkey=d=>d.getFullYear()+'-'+f2(d.getMonth()+1)+'-'+f2(d.getDate());
+const fhm=d=>f2(d.getHours())+':'+f2(d.getMinutes());
+// 会社カレンダー上書き
+// SPECIAL_WORK_DAYS: 土日祝だが出勤（例: 振替出勤）
+const SPECIAL_WORK_DAYS = new Set([
+  '2026-05-02',   // 土曜だが出勤
+  '2026-05-09',   // 土曜だが出勤
+  '2026-10-24',   // 休日→稼働日に変更
+]);
+// COMPANY_OFFS: 平日だが会社休み
+const COMPANY_OFFS = new Set([
+  '2026-10-17',   // 稼働日→休日に変更
+]);
+const HOL_NAMES_EXTRA = {
+  '2026-10-17':'会社休日',
+};
+const isHol=d=>!SPECIAL_WORK_DAYS.has(dkey(d))&&(d.getDay()===0||d.getDay()===6||HOLIDAYS.has(dkey(d))||COMPANY_OFFS.has(dkey(d)));
+function addWorkdays(d,n){let dt=new Date(d),a=0;while(a<n){dt.setDate(dt.getDate()+1);if(!isHol(dt))a++;}return dt;}
+function getPeriod(d){
+  const y=d.getFullYear(),m=d.getMonth();
+  if(d.getDate()<=CLOSE_DAY)return{s:dkey(new Date(y,m-1,21)),e:dkey(new Date(y,m,CLOSE_DAY))};
+  return{s:dkey(new Date(y,m,21)),e:dkey(new Date(y,m+1,CLOSE_DAY))};
+}
+function uid(){return 'u'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function lid(){return 'lv'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function aid(){return 'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+// ═══════════════════════════════════════════════
+//  セッション状態
+// ═══════════════════════════════════════════════
+// ═══════════════════════════════════════════════
+//  多言語（i18n）
+// ═══════════════════════════════════════════════
+const TRANSLATIONS={
+  ja:{
+    langLabel:'言語',selectAccount:'アカウントを選択',password:'パスワード',
+    pwPlaceholder:'パスワードを入力',login:'ログイン',back:'戻る',pwError:'パスワードが違います',
+    logout:'ログアウト',
+    tab_打刻:'打刻',tab_履歴:'履歴',tab_カレンダー:'カレンダー',tab_申請:'申請',
+    tab_日報:'日報',tab_お知らせ:'お知らせ',tab_QR:'QR',
+    tab_管理:'管理',tab_社員管理:'社員管理',tab_休暇承認:'休暇承認',tab_修正承認:'修正承認',
+    tab_月次集計:'月次集計',tab_打刻履歴:'打刻履歴',tab_日報閲覧:'日報閲覧',tab_マスター:'マスター',
+    clockIn:'出　勤',clockOut:'退　勤',
+    statusOff:'未出勤',statusIn:'出勤中',statusOut:'退勤済',statusLate:'遅刻',
+    notifAll:'すべて',notifLeave:'有給',notifMessage:'メッセージ',
+    markAllRead:'全て既読',noNotif:'お知らせはありません',
+    sendMsg:'メッセージを送る',msgTo:'宛先',msgAll:'全員',msgBody:'メッセージ',
+    msgSend:'送信する',msgPlaceholder:'内容を入力してください',msgSent:'送信しました',msgErr:'メッセージを入力してください',
+    rptTitle:'日報を書く',rptDate:'日付',rptSite:'物件',rptSelectSite:'物件を選択',
+    rptDest:'行先',rptSelectDest:'行先を選択',rptWork:'作業内容',rptSelectWork:'作業を選択',
+    rptHours:'時間(h)',rptHashira:'柱',rptHari:'梁',rptNote:'備考',
+    rptNotePh:'連絡事項・特記事項など',rptAddRow:'＋ 行を追加',rptSubmit:'送信する',
+    rptHistory:'過去の日報',rptEditTitle:'日報を編集',rptCancel:'キャンセル',rptSave:'保存',
+    rptErrDate:'日付を選択してください',rptErrNoItems:'物件と作業内容を選択してください',
+    rptErrNoBkId:'物件が未選択の行があります',rptErrNoYuki:'行先が未選択の行があります',
+    rptErrNoHours:'作業時間が未入力の行があります',
+    yukisakiLabels:['富士宮工場','SD工房','FUJIYAMAヤード','新富士工場','その他'],
+  },
+  en:{
+    langLabel:'Language',selectAccount:'Select Account',password:'Password',
+    pwPlaceholder:'Enter password',login:'Login',back:'Back',pwError:'Incorrect password',
+    logout:'Logout',
+    tab_打刻:'Clock',tab_履歴:'History',tab_カレンダー:'Calendar',tab_申請:'Request',
+    tab_日報:'Report',tab_お知らせ:'Notice',tab_QR:'QR',
+    tab_管理:'Dashboard',tab_社員管理:'Staff',tab_休暇承認:'Leave',tab_修正承認:'Correction',
+    tab_月次集計:'Monthly',tab_打刻履歴:'Clock Log',tab_日報閲覧:'Reports',tab_マスター:'Master',
+    clockIn:'Clock In',clockOut:'Clock Out',
+    statusOff:'Not Clocked In',statusIn:'Working',statusOut:'Clocked Out',statusLate:'Late',
+    notifAll:'All',notifLeave:'Leave',notifMessage:'Messages',
+    markAllRead:'Mark All Read',noNotif:'No notifications',
+    sendMsg:'Send Message',msgTo:'To',msgAll:'Everyone',msgBody:'Message',
+    msgSend:'Send',msgPlaceholder:'Enter your message',msgSent:'Sent',msgErr:'Please enter a message',
+    rptTitle:'Daily Report',rptDate:'Date',rptSite:'Site',rptSelectSite:'Select Site',
+    rptDest:'Destination',rptSelectDest:'Select Destination',rptWork:'Work Content',rptSelectWork:'Select Work',
+    rptHours:'Hours(h)',rptHashira:'Columns',rptHari:'Beams',rptNote:'Notes',
+    rptNotePh:'Additional notes / remarks',rptAddRow:'＋ Add Row',rptSubmit:'Submit',
+    rptHistory:'Past Reports',rptEditTitle:'Edit Report',rptCancel:'Cancel',rptSave:'Save',
+    rptErrDate:'Please select a date',rptErrNoItems:'Please select site and work content',
+    rptErrNoBkId:'Site not selected in some rows',rptErrNoYuki:'Destination not selected in some rows',
+    rptErrNoHours:'Work hours not entered in some rows',
+    yukisakiLabels:['Fujinomiya Factory','SD Workshop','FUJIYAMA Yard','Shin-Fuji Factory','Other'],
+  },
+  vi:{
+    langLabel:'Ngôn ngữ',selectAccount:'Chọn tài khoản',password:'Mật khẩu',
+    pwPlaceholder:'Nhập mật khẩu',login:'Đăng nhập',back:'Quay lại',pwError:'Sai mật khẩu',
+    logout:'Đăng xuất',
+    tab_打刻:'Chấm công',tab_履歴:'Lịch sử',tab_カレンダー:'Lịch',tab_申請:'Đơn xin',
+    tab_日報:'Báo cáo',tab_お知らせ:'Thông báo',tab_QR:'QR',
+    tab_管理:'Tổng quan',tab_社員管理:'Nhân viên',tab_休暇承認:'Nghỉ phép',tab_修正承認:'Chỉnh sửa',
+    tab_月次集計:'Tháng',tab_打刻履歴:'LS chấm công',tab_日報閲覧:'Xem BC',tab_マスター:'Master',
+    clockIn:'Vào ca',clockOut:'Ra ca',
+    statusOff:'Chưa vào ca',statusIn:'Đang làm việc',statusOut:'Đã ra ca',statusLate:'Đi muộn',
+    notifAll:'Tất cả',notifLeave:'Nghỉ phép',notifMessage:'Tin nhắn',
+    markAllRead:'Đọc tất cả',noNotif:'Không có thông báo',
+    sendMsg:'Gửi tin nhắn',msgTo:'Người nhận',msgAll:'Tất cả',msgBody:'Nội dung',
+    msgSend:'Gửi',msgPlaceholder:'Nhập nội dung tin nhắn',msgSent:'Đã gửi',msgErr:'Vui lòng nhập nội dung',
+    rptTitle:'Báo cáo ngày',rptDate:'Ngày',rptSite:'Công trình',rptSelectSite:'Chọn công trình',
+    rptDest:'Điểm đến',rptSelectDest:'Chọn điểm đến',rptWork:'Nội dung công việc',rptSelectWork:'Chọn công việc',
+    rptHours:'Giờ(h)',rptHashira:'Cột',rptHari:'Dầm',rptNote:'Ghi chú',
+    rptNotePh:'Ghi chú bổ sung',rptAddRow:'＋ Thêm dòng',rptSubmit:'Gửi báo cáo',
+    rptHistory:'Báo cáo cũ',rptEditTitle:'Chỉnh sửa báo cáo',rptCancel:'Hủy',rptSave:'Lưu',
+    rptErrDate:'Vui lòng chọn ngày',rptErrNoItems:'Vui lòng chọn công trình và nội dung',
+    rptErrNoBkId:'Có dòng chưa chọn công trình',rptErrNoYuki:'Có dòng chưa chọn điểm đến',
+    rptErrNoHours:'Có dòng chưa nhập giờ làm',
+    yukisakiLabels:['Nhà máy Fujinomiya','Xưởng SD','Bãi FUJIYAMA','Nhà máy Shin-Fuji','Khác'],
+  },
+  zh:{
+    langLabel:'语言',selectAccount:'选择账户',password:'密码',
+    pwPlaceholder:'请输入密码',login:'登录',back:'返回',pwError:'密码错误',
+    logout:'退出',
+    tab_打刻:'打卡',tab_履歴:'历史',tab_カレンダー:'日历',tab_申請:'申请',
+    tab_日報:'日报',tab_お知らせ:'通知',tab_QR:'QR',
+    tab_管理:'管理',tab_社員管理:'员工',tab_休暇承認:'休假',tab_修正承認:'修正',
+    tab_月次集計:'月度',tab_打刻履歴:'打卡记录',tab_日報閲覧:'查看日报',tab_マスター:'主数据',
+    clockIn:'上班',clockOut:'下班',
+    statusOff:'未上班',statusIn:'上班中',statusOut:'已下班',statusLate:'迟到',
+    notifAll:'全部',notifLeave:'年假',notifMessage:'消息',
+    markAllRead:'全部已读',noNotif:'暂无通知',
+    sendMsg:'发送消息',msgTo:'收件人',msgAll:'全员',msgBody:'消息内容',
+    msgSend:'发送',msgPlaceholder:'请输入消息内容',msgSent:'已发送',msgErr:'请输入消息',
+    rptTitle:'日报',rptDate:'日期',rptSite:'工地',rptSelectSite:'选择工地',
+    rptDest:'目的地',rptSelectDest:'选择目的地',rptWork:'作业内容',rptSelectWork:'选择作业',
+    rptHours:'时间(h)',rptHashira:'柱',rptHari:'梁',rptNote:'备注',
+    rptNotePh:'附加说明',rptAddRow:'＋ 添加行',rptSubmit:'提交',
+    rptHistory:'历史日报',rptEditTitle:'编辑日报',rptCancel:'取消',rptSave:'保存',
+    rptErrDate:'请选择日期',rptErrNoItems:'请选择工地和作业内容',
+    rptErrNoBkId:'有行未选择工地',rptErrNoYuki:'有行未选择目的地',
+    rptErrNoHours:'有行未输入时间',
+    yukisakiLabels:['富士宫工厂','SD工坊','FUJIYAMA货场','新富士工厂','其他'],
+  },
+  pt:{
+    langLabel:'Idioma',selectAccount:'Selecionar conta',password:'Senha',
+    pwPlaceholder:'Digite a senha',login:'Entrar',back:'Voltar',pwError:'Senha incorreta',
+    logout:'Sair',
+    tab_打刻:'Ponto',tab_履歴:'Histórico',tab_カレンダー:'Calendário',tab_申請:'Solicitação',
+    tab_日報:'Relatório',tab_お知らせ:'Avisos',tab_QR:'QR',
+    tab_管理:'Painel',tab_社員管理:'Funcionários',tab_休暇承認:'Férias',tab_修正承認:'Correção',
+    tab_月次集計:'Mensal',tab_打刻履歴:'Reg. Ponto',tab_日報閲覧:'Ver Rel.',tab_マスター:'Mestre',
+    clockIn:'Entrada',clockOut:'Saída',
+    statusOff:'Não registrado',statusIn:'Trabalhando',statusOut:'Saída registrada',statusLate:'Atrasado',
+    notifAll:'Todos',notifLeave:'Férias',notifMessage:'Mensagens',
+    markAllRead:'Marcar todos',noNotif:'Sem notificações',
+    sendMsg:'Enviar mensagem',msgTo:'Para',msgAll:'Todos',msgBody:'Mensagem',
+    msgSend:'Enviar',msgPlaceholder:'Digite sua mensagem',msgSent:'Enviado',msgErr:'Digite uma mensagem',
+    rptTitle:'Relatório Diário',rptDate:'Data',rptSite:'Obra',rptSelectSite:'Selecionar Obra',
+    rptDest:'Destino',rptSelectDest:'Selecionar Destino',rptWork:'Conteúdo do Trabalho',rptSelectWork:'Selecionar Trabalho',
+    rptHours:'Horas(h)',rptHashira:'Colunas',rptHari:'Vigas',rptNote:'Notas',
+    rptNotePh:'Observações adicionais',rptAddRow:'＋ Adicionar linha',rptSubmit:'Enviar',
+    rptHistory:'Relatórios Anteriores',rptEditTitle:'Editar Relatório',rptCancel:'Cancelar',rptSave:'Salvar',
+    rptErrDate:'Por favor selecione uma data',rptErrNoItems:'Selecione obra e conteúdo do trabalho',
+    rptErrNoBkId:'Há linhas sem obra selecionada',rptErrNoYuki:'Há linhas sem destino selecionado',
+    rptErrNoHours:'Há linhas sem horas preenchidas',
+    yukisakiLabels:['Fábrica Fujinomiya','Oficina SD','Pátio FUJIYAMA','Fábrica Shin-Fuji','Outros'],
+  },
+  th:{
+    langLabel:'ภาษา',selectAccount:'เลือกบัญชี',password:'รหัสผ่าน',
+    pwPlaceholder:'กรอกรหัสผ่าน',login:'เข้าสู่ระบบ',back:'กลับ',pwError:'รหัสผ่านไม่ถูกต้อง',
+    logout:'ออกจากระบบ',
+    tab_打刻:'ลงเวลา',tab_履歴:'ประวัติ',tab_カレンダー:'ปฏิทิน',tab_申請:'คำขอ',
+    tab_日報:'รายงาน',tab_お知らせ:'แจ้งเตือน',tab_QR:'QR',
+    tab_管理:'แดชบอร์ด',tab_社員管理:'พนักงาน',tab_休暇承認:'ลาพักร้อน',tab_修正承認:'แก้ไข',
+    tab_月次集計:'รายเดือน',tab_打刻履歴:'ประวัติลงเวลา',tab_日報閲覧:'ดูรายงาน',tab_マスター:'ข้อมูลหลัก',
+    clockIn:'เข้างาน',clockOut:'ออกงาน',
+    statusOff:'ยังไม่ลงเวลา',statusIn:'กำลังทำงาน',statusOut:'ออกงานแล้ว',statusLate:'มาสาย',
+    notifAll:'ทั้งหมด',notifLeave:'ลาพักร้อน',notifMessage:'ข้อความ',
+    markAllRead:'อ่านทั้งหมด',noNotif:'ไม่มีการแจ้งเตือน',
+    sendMsg:'ส่งข้อความ',msgTo:'ถึง',msgAll:'ทุกคน',msgBody:'ข้อความ',
+    msgSend:'ส่ง',msgPlaceholder:'กรอกข้อความ',msgSent:'ส่งแล้ว',msgErr:'กรุณากรอกข้อความ',
+    rptTitle:'รายงานประจำวัน',rptDate:'วันที่',rptSite:'สถานที่',rptSelectSite:'เลือกสถานที่',
+    rptDest:'ปลายทาง',rptSelectDest:'เลือกปลายทาง',rptWork:'เนื้อหางาน',rptSelectWork:'เลือกงาน',
+    rptHours:'ชั่วโมง(h)',rptHashira:'เสา',rptHari:'คาน',rptNote:'หมายเหตุ',
+    rptNotePh:'หมายเหตุเพิ่มเติม',rptAddRow:'＋ เพิ่มแถว',rptSubmit:'ส่งรายงาน',
+    rptHistory:'รายงานเก่า',rptEditTitle:'แก้ไขรายงาน',rptCancel:'ยกเลิก',rptSave:'บันทึก',
+    rptErrDate:'กรุณาเลือกวันที่',rptErrNoItems:'กรุณาเลือกสถานที่และเนื้อหางาน',
+    rptErrNoBkId:'มีแถวที่ยังไม่ได้เลือกสถานที่',rptErrNoYuki:'มีแถวที่ยังไม่ได้เลือกปลายทาง',
+    rptErrNoHours:'มีแถวที่ยังไม่ได้ใส่ชั่วโมง',
+    yukisakiLabels:['โรงงานฟูจิโนมิยะ','เวิร์คช็อป SD','ลาน FUJIYAMA','โรงงานชินฟูจิ','อื่นๆ'],
+  },
+  id:{
+    langLabel:'Bahasa',selectAccount:'Pilih akun',password:'Kata sandi',
+    pwPlaceholder:'Masukkan kata sandi',login:'Masuk',back:'Kembali',pwError:'Kata sandi salah',
+    logout:'Keluar',
+    tab_打刻:'Absensi',tab_履歴:'Riwayat',tab_カレンダー:'Kalender',tab_申請:'Permohonan',
+    tab_日報:'Laporan',tab_お知らせ:'Pemberitahuan',tab_QR:'QR',
+    tab_管理:'Dasbor',tab_社員管理:'Karyawan',tab_休暇承認:'Cuti',tab_修正承認:'Koreksi',
+    tab_月次集計:'Bulanan',tab_打刻履歴:'Riwayat Absen',tab_日報閲覧:'Lihat Laporan',tab_マスター:'Master',
+    clockIn:'Masuk Kerja',clockOut:'Pulang Kerja',
+    statusOff:'Belum Absen',statusIn:'Sedang Bekerja',statusOut:'Sudah Pulang',statusLate:'Terlambat',
+    notifAll:'Semua',notifLeave:'Cuti',notifMessage:'Pesan',
+    markAllRead:'Tandai Semua',noNotif:'Tidak ada pemberitahuan',
+    sendMsg:'Kirim Pesan',msgTo:'Kepada',msgAll:'Semua',msgBody:'Pesan',
+    msgSend:'Kirim',msgPlaceholder:'Masukkan pesan',msgSent:'Terkirim',msgErr:'Masukkan pesan terlebih dahulu',
+    rptTitle:'Laporan Harian',rptDate:'Tanggal',rptSite:'Proyek',rptSelectSite:'Pilih Proyek',
+    rptDest:'Tujuan',rptSelectDest:'Pilih Tujuan',rptWork:'Isi Pekerjaan',rptSelectWork:'Pilih Pekerjaan',
+    rptHours:'Jam(h)',rptHashira:'Kolom',rptHari:'Balok',rptNote:'Catatan',
+    rptNotePh:'Catatan tambahan',rptAddRow:'＋ Tambah baris',rptSubmit:'Kirim Laporan',
+    rptHistory:'Laporan Lama',rptEditTitle:'Edit Laporan',rptCancel:'Batal',rptSave:'Simpan',
+    rptErrDate:'Pilih tanggal terlebih dahulu',rptErrNoItems:'Pilih proyek dan isi pekerjaan',
+    rptErrNoBkId:'Ada baris yang belum pilih proyek',rptErrNoYuki:'Ada baris yang belum pilih tujuan',
+    rptErrNoHours:'Ada baris yang belum isi jam kerja',
+    yukisakiLabels:['Pabrik Fujinomiya','Bengkel SD','Lapangan FUJIYAMA','Pabrik Shin-Fuji','Lainnya'],
+  },
+  si:{
+    langLabel:'භාෂාව',selectAccount:'ගිණුම තෝරන්න',password:'මුරපදය',
+    pwPlaceholder:'මුරපදය ඇතුළු කරන්න',login:'පිවිසෙන්න',back:'ආපසු',pwError:'මුරපදය වැරදියි',
+    logout:'ඉවත් වන්න',
+    tab_打刻:'පැමිණීම',tab_履歴:'ඉතිහාසය',tab_カレンダー:'දිනදර්ශනය',tab_申請:'ඉල්ලීම',
+    tab_日報:'වාර්තාව',tab_お知らせ:'දැනුම්දීම්',tab_QR:'QR',
+    tab_管理:'පාලන පුවරුව',tab_社員管理:'සේවකයින්',tab_休暇承認:'නිවාඩු',tab_修正承認:'නිවැරදි කිරීම',
+    tab_月次集計:'මාසික',tab_打刻履歴:'පැමිණීම් ඉතිහාසය',tab_日報閲覧:'වාර්තා බලන්න',tab_マスター:'ප්‍රධාන',
+    clockIn:'ඇතුළු වෙන්න',clockOut:'පිටව යන්න',
+    statusOff:'ලියාපදිංචි නැත',statusIn:'වැඩ කරමින්',statusOut:'පිටව ගොස්',statusLate:'ප්‍රමාදයි',
+    notifAll:'සියල්ල',notifLeave:'නිවාඩු',notifMessage:'පණිවිඩ',
+    markAllRead:'සියල්ල කියවා ඇත',noNotif:'දැනුම්දීම් නැත',
+    sendMsg:'පණිවිඩ යවන්න',msgTo:'දෙස',msgAll:'සියලුදෙනා',msgBody:'පණිවිඩය',
+    msgSend:'යවන්න',msgPlaceholder:'පණිවිඩය ඇතුළු කරන්න',msgSent:'යවා ඇත',msgErr:'පණිවිඩය ඇතුළු කරන්න',
+    rptTitle:'දෛනික වාර්තාව',rptDate:'දිනය',rptSite:'ස්ථානය',rptSelectSite:'ස්ථානය තෝරන්න',
+    rptDest:'ගමනාන්තය',rptSelectDest:'ගමනාන්තය තෝරන්න',rptWork:'කාර්ය අන්තර්ගතය',rptSelectWork:'කාර්යය තෝරන්න',
+    rptHours:'පැය(h)',rptHashira:'សសුන්',rptHari:'කිරිල්ල',rptNote:'සටහන',
+    rptNotePh:'අමතර සටහන්',rptAddRow:'＋ පේළිය එකතු කරන්න',rptSubmit:'ඉදිරිපත් කරන්න',
+    rptHistory:'පෙර වාර්තා',rptEditTitle:'වාර්තාව සංස්කරණය',rptCancel:'අවලංගු',rptSave:'සුරකින්න',
+    rptErrDate:'කරුණාකර දිනය තෝරන්න',rptErrNoItems:'ස්ථානය සහ කාර්යය තෝරන්න',
+    rptErrNoBkId:'සමහර පේළිවල ස්ථානය නොතෝරා ඇත',rptErrNoYuki:'සමහර පේළිවල ගමනාන්තය නොතෝරා ඇත',
+    rptErrNoHours:'සමහර පේළිවල පැය ඇතුළත් කර නැත',
+    yukisakiLabels:['Fujinomiya කර්මාන්ශාලාව','SD කාර්යාගාරය','FUJIYAMA ගොඩනැඟිල්ල','Shin-Fuji කර්මාන්ශාලාව','වෙනත්'],
+  },
+};
+let currentLang=localStorage.getItem('kintai_lang')||'ja';
+function t(key){ return (TRANSLATIONS[currentLang]||TRANSLATIONS.ja)[key]||(TRANSLATIONS.ja[key]||key); }
+function setLang(lang){
+  currentLang=lang;
+  localStorage.setItem('kintai_lang',lang);
+  if(lang!=='ja'){
+    // sagyo全ラベルを事前翻訳してからUI更新（ツリーピッカーが翻訳済みで描画される）
+    preSagyoTranslations(lang).then(()=>applyLang());
+  } else {
+    applyLang();
+  }
+}
+function applyLang(){
+  // 両セレクトの値を同期
+  ['lang-select','lang-select-app'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.value=currentLang;
+  });
+  // data-i18n 属性を持つ要素のテキストを更新
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    const key=el.dataset.i18n;
+    if(el.tagName==='INPUT'||el.tagName==='TEXTAREA') el.placeholder=t(key);
+    else el.textContent=t(key);
+  });
+  // ログアウトボタン
+  const lb=document.querySelector('.logout-btn');
+  if(lb) lb.textContent=t('logout');
+  // タブ再構築（ログイン済みの場合）
+  if(S.user){ buildTabs(); }
+  // 打刻ボタン・ステータス更新
+  const bi=document.getElementById('btn-in');
+  const bo=document.getElementById('btn-out');
+  if(bi) bi.textContent=t('clockIn');
+  if(bo) bo.textContent=t('clockOut');
+  restoreClockState();
+  // 通知タブ
+  renderNotifications();
+  // 日報フォームの行を再描画（ラベル・行先選択肢を現在言語に更新）
+  const rptRowsEl=document.getElementById('rpt-rows');
+  if(rptRowsEl && rptRowsEl.children.length>0){
+    rptRowsEl.innerHTML='';
+    addRptRow();
+  }
+  // 作業内容ツリーピッカーの翻訳を適用
+  applyRptFormTranslations(document.getElementById('rpt-rows'));
+  applyRptFormTranslations(document.getElementById('rpt-edit-rows'));
+}
+
+let S={user:null,clockedIn:false,clockInTime:null,isLate:false,isHolWork:false,inLoc:null,pendingAttId:null,pendingRec:null,calY:new Date().getFullYear(),calM:new Date().getMonth(),editingUID:null,qrDone:false};
+
+function mapUrl(loc){return`https://www.google.com/maps?q=${loc.lat},${loc.lng}`;}
+function locLinks(inLoc,outLoc){
+  const il=inLoc&&inLoc.lat?inLoc:null;
+  const ol=outLoc&&outLoc.lat?outLoc:null;
+  if(!il&&!ol) return'<span style="color:var(--muted);font-size:11px">—</span>';
+  let s='';
+  if(il) s+=`<a href="${mapUrl(il)}" target="_blank" style="font-size:10px;color:var(--info);text-decoration:none">📍出</a>`;
+  if(ol) s+=(s?' ':'')+`<a href="${mapUrl(ol)}" target="_blank" style="font-size:10px;color:var(--danger);text-decoration:none">📍退</a>`;
+  return s;
+}
+function typeBadge(type){
+  const m={
+    '出勤':  '<span class="b-ok" style="font-size:10px">出勤</span>',
+    '遅刻':  '<span class="badge b-late" style="font-size:10px">遅刻</span>',
+    '早退':  '<span class="badge b-late" style="font-size:10px">早退</span>',
+    '中抜け':'<span class="badge b-ot" style="font-size:10px">中抜け</span>',
+    '休日出勤':'<span class="badge b-ot" style="font-size:10px">休日出勤</span>',
+    '欠勤':  '<span class="badge b-off" style="font-size:10px">欠勤</span>',
+    'その他':'<span class="badge b-off" style="font-size:10px">その他</span>',
+  };
+  return m[type]||`<span class="b-ok" style="font-size:10px">${type}</span>`;
+}
+
+// ═══════════════════════════════════════════════
+//  ログイン
+// ═══════════════════════════════════════════════
+function renderLoginList(){
+  const users=DB.users.filter(u=>u.visible!==false)
+    .sort((a,b)=>{
+      const aAdmin=a.type==='admin'?1:0, bAdmin=b.type==='admin'?1:0;
+      if(aAdmin!==bAdmin) return aAdmin-bAdmin; // 管理者を末尾へ
+      if(aAdmin) return (a.empNo||'').localeCompare(b.empNo||''); // 管理者同士は社員番号順
+      const aPin=a.pinBottom?1:0, bPin=b.pinBottom?1:0;
+      if(aPin!==bPin) return aPin-bPin; // pinBottom=true を管理者の直前へ
+      return (a.displayOrder??999999)-(b.displayOrder??999999); // 一般は従来通り
+    });
+  document.getElementById('user-list-login').innerHTML=users.map(u=>`
+    <div onclick="selectUser('${u.id}')" style="display:flex;align-items:center;gap:10px;padding:9px 8px;border:1px solid var(--border);border-radius:7px;margin-bottom:6px;cursor:pointer;background:var(--bg);transition:background .15s"
+      onmouseover="this.style.background='var(--al)'" onmouseout="this.style.background='var(--bg)'">
+      <div style="width:34px;height:34px;border-radius:50%;background:${u.type==='admin'?'#2d1a5a':u.type==='employee'?'var(--il)':'var(--pl)'};display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:${u.type==='admin'?'#d8d4f8':u.type==='employee'?'var(--info)':'var(--purple)'}">
+        ${u.name.slice(0,1)}
+      </div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${u.name}</div></div>
+      <span class="badge ${u.type==='admin'?'b-admin':u.type==='employee'?'b-emp':'b-con'}">${u.type==='admin'?'管理者':u.type==='employee'?'社員':'外注'}</span>
+    </div>`).join('');
+}
+
+function selectUser(id){
+  S.editingUID=id;
+  const u=DB.findUser(id);
+  document.getElementById('login-user-sel').classList.add('hidden');
+  document.getElementById('login-pw-form').classList.remove('hidden');
+  document.getElementById('login-selected-name').innerHTML=u.name+'&nbsp;<span class="badge '+( u.type==='admin'?'b-admin':u.type==='employee'?'b-emp':'b-con')+'">'+( u.type==='admin'?'管理者':u.type==='employee'?'社員':'外注')+'</span>';
+  document.getElementById('pw-input').value='';
+  document.getElementById('pw-err').textContent='';
+  document.getElementById('pw-btn').disabled=true;
+  document.getElementById('pw-input').focus();
+}
+function backToList(){
+  document.getElementById('login-pw-form').classList.add('hidden');
+  document.getElementById('login-user-sel').classList.remove('hidden');
+}
+function checkPW(){document.getElementById('pw-btn').disabled=document.getElementById('pw-input').value==='';}
+function doLogin(){
+  const u=DB.findUser(S.editingUID);
+  if(document.getElementById('pw-input').value!==u.pw){document.getElementById('pw-err').textContent='パスワードが違います';return;}
+  initAudioCtx(); // ユーザー操作中に AudioContext を初期化（自動再生ポリシー対策）
+  S.user=u;
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app-screen').style.display='flex';
+  document.getElementById('header-name').textContent=u.name;
+  document.getElementById('header-sub').textContent=u.type==='admin'?'管理者':u.type==='employee'?'社員':'外注';
+  buildTabs();
+  updateDayBar();
+  updateStats();
+  renderHistTable();
+  buildLeaveUI();
+  // 日報入力欄を初期化（日付＋1行）
+  const dateEl=document.getElementById('rpt-date');
+  if(dateEl&&!dateEl.value) dateEl.value=dkey(new Date());
+  const tbody=document.getElementById('rpt-rows');
+  if(tbody&&!tbody.children.length){
+    if(currentLang!=='ja'){
+      // 非日本語設定：sagyo翻訳キャッシュ準備後に行を追加
+      preSagyoTranslations(currentLang).then(()=>{
+        if(!tbody.children.length) addRptRow();
+      });
+    } else {
+      addRptRow();
+    }
+  }
+  if(u.type==='admin'){renderAdminDash();renderUserMgmt();renderLeaveApproval();buildAggFilters();renderAgg();checkLeaveExpiry();checkLeaveObligation();}
+  // ログインユーザー自身の通知のみ取得（プライバシー保護）
+  setupNotifListener(u.id);
+}
+function doLogout(){
+  teardownNotifListener();
+  S={user:null,clockedIn:false,clockInTime:null,isLate:false,calY:new Date().getFullYear(),calM:new Date().getMonth(),editingUID:null,qrDone:false};
+  document.getElementById('app-screen').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('login-pw-form').classList.add('hidden');
+  document.getElementById('login-user-sel').classList.remove('hidden');
+  switchTab('打刻');
+}
+
+// ═══════════════════════════════════════════════
+//  タブ構築（ボトムナビ）
+// ═══════════════════════════════════════════════
+const TAB_ICON={
+  '打刻':'⏱','履歴':'📋','カレンダー':'📅','申請':'✏️','日報':'📝','お知らせ':'🔔','QR':'📲',
+  '管理':'📊','社員管理':'👥','休暇承認':'🏖','修正承認':'✅','月次集計':'📈','打刻履歴':'🗂','日報閲覧':'📂','マスター':'⚙️',
+  'その他':'≡'
+};
+function buildTabs(){
+  const isAdmin=S.user.type==='admin';
+  // ボトムナビに並べるメインタブ（最大5個）
+  const primaryTabs=isAdmin
+    ?['打刻','日報','管理','お知らせ','その他']
+    :['打刻','日報','申請','お知らせ','その他'];
+  // ドロワーに入るサブタブ
+  const drawerTabs=isAdmin
+    ?['履歴','申請','社員管理','休暇承認','修正承認','月次集計','打刻履歴','日報閲覧','マスター']
+    :['履歴','カレンダー','QR'];
+
+  const el=document.getElementById('main-tabs');
+  el.innerHTML=primaryTabs.map(key=>{
+    if(key==='その他') return `<button class="tab" data-tab="その他" onclick="toggleTabDrawer()"><span class="tab-icon">${TAB_ICON[key]}</span><span>${key}</span></button>`;
+    return `<button class="tab" data-tab="${key}" onclick="switchTab('${key}')"><span class="tab-icon">${TAB_ICON[key]}</span><span>${t('tab_'+key)||key}</span></button>`;
+  }).join('');
+
+  // ドロワーグリッド
+  const drawerEl=document.getElementById('tab-drawer-grid');
+  drawerEl.innerHTML=drawerTabs.map(key=>
+    `<button class="drawer-item" data-tab="${key}" onclick="switchTabFromDrawer('${key}')"><span class="di">${TAB_ICON[key]||'📄'}</span><span>${t('tab_'+key)||key}</span></button>`
+  ).join('');
+
+  switchTab(primaryTabs[0]);
+  updateNotifBadge();
+}
+function toggleTabDrawer(){
+  const d=document.getElementById('tab-drawer');
+  const o=document.getElementById('tab-drawer-overlay');
+  const isOpen=d.classList.contains('open');
+  d.classList.toggle('open',!isOpen);
+  o.classList.toggle('open',!isOpen);
+}
+function closeTabDrawer(){
+  document.getElementById('tab-drawer').classList.remove('open');
+  document.getElementById('tab-drawer-overlay').classList.remove('open');
+}
+function switchTabFromDrawer(name){
+  closeTabDrawer();
+  // ボトムナビの「その他」をアクティブに
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab==='その他'));
+  // ドロワーアイテムのアクティブ更新
+  document.querySelectorAll('.drawer-item').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  _activateTab(name);
+}
+function switchTab(name){
+  closeTabDrawer();
+  document.querySelectorAll('.tab').forEach(t=>t.classList.toggle('active',t.dataset.tab===name));
+  document.querySelectorAll('.drawer-item').forEach(t=>t.classList.remove('active'));
+  _activateTab(name);
+}
+function _activateTab(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  const p=document.getElementById('page-'+name);
+  if(p) p.classList.add('active');
+  if(name==='カレンダー') renderCal();
+  if(name==='QR') initQR();
+  if(name==='打刻') restoreClockState();
+  if(name==='日報') renderDailyReport();
+  if(name==='お知らせ') renderNotifications();
+  if(name==='申請'){ buildLeaveUI(); renderCorrectionList(); }
+  if(name==='管理') renderAdminDash();
+  if(name==='社員管理') renderUserMgmt();
+  if(name==='休暇承認') renderLeaveApproval();
+  if(name==='修正承認') renderCorrectionAdmin();
+  if(name==='月次集計') renderAgg();
+  if(name==='日報閲覧') renderReportAdmin();
+  if(name==='マスター'){ renderBukkenMaster(); renderSagyoMaster(); }
+  if(name==='打刻履歴') initAttHistory();
+}
+
+// ═══════════════════════════════════════════════
+//  時計
+// ═══════════════════════════════════════════════
+function tickClock(){
+  const now=new Date();
+  document.getElementById('clk-time').textContent=f2(now.getHours())+':'+f2(now.getMinutes())+':'+f2(now.getSeconds());
+  const days=['日','月','火','水','木','金','土'];
+  document.getElementById('clk-date').textContent=now.getFullYear()+'年'+(now.getMonth()+1)+'月'+now.getDate()+'日（'+days[now.getDay()]+'）';
+}
+setInterval(tickClock,1000); tickClock();
+
+function updateDayBar(){
+  if(!S.user) return;
+  const now=new Date(), key=dkey(now), bar=document.getElementById('day-bar');
+  const u=DB.findUser(S.user.id)||S.user;
+  const customDaysOff=u.customDaysOff||[];
+  const isCustomOff=customDaysOff.includes(now.getDay());
+  if(isHol(now)){
+    const nm=HOL_NAMES[key]||(now.getDay()===0?'日曜日':'土曜日');
+    bar.textContent='休日（'+nm+'）　※休日出勤可'; bar.className='day-bar day-hol';
+  } else if(isCustomOff){
+    const days=['日','月','火','水','木','金','土'];
+    bar.textContent='本日は定休日（'+days[now.getDay()]+'）です　※出勤可'; bar.className='day-bar day-hol';
+  } else {
+    const start=u.customStart||'08:00';
+    const end=u.customEnd||'17:00';
+    const ph=prescribedH(u);
+    bar.textContent=`稼働日　${start}–${end}　休憩1.5h　所定${ph}h`; bar.className='day-bar day-work';
+  }
+  restoreClockState();
+}
+
+// ═══════════════════════════════════════════════
+//  打刻状態の復元（ページリロード・ログイン後）
+// ═══════════════════════════════════════════════
+function restoreClockState(){
+  if(!S.user) return;
+  const todayKey=dkey(new Date());
+  const todayRec=CACHE.att.find(a=>a.uid===S.user.id&&a.date===todayKey);
+  const btnIn=document.getElementById('btn-in');
+  const btnOut=document.getElementById('btn-out');
+  const sb=document.getElementById('status-badge');
+  if(!todayRec){
+    // 本日の打刻なし → 出勤可
+    btnIn.disabled=false; btnOut.disabled=true;
+    sb.textContent=t('statusOff'); sb.className='badge';
+  } else if(todayRec.out===''){
+    // 出勤中（退勤未打刻）→ 別端末からでも退勤できるよう状態を復元
+    S.clockedIn=true; S.pendingAttId=todayRec.id;
+    // isHolWork / isLate を保存済み type から復元
+    S.isHolWork=!!(todayRec.type||'').includes('休日');
+    S.isLate=!!(todayRec.type||'').includes('遅刻');
+    // 出勤時刻を文字列から Date に復元（実働時間計算のため）
+    if(!S.clockInTime || S.clockInTime._restored){
+      const [h,m]=todayRec.in.split(':').map(Number);
+      const tr=new Date(); tr.setHours(h,m,0,0);
+      tr._restored=true; // 復元フラグ（実打刻との区別用）
+      S.clockInTime=tr;
+    }
+    sb.textContent=t('statusIn'); sb.className='badge b-in';
+    document.getElementById('late-badge').textContent=t('statusLate');
+    document.getElementById('late-badge').classList.toggle('hidden',!S.isLate);
+    document.getElementById('clk-info').textContent='出勤: '+todayRec.in+(S.isHolWork?' 🔶 休日出勤':S.isLate?' ⚠ '+t('statusLate'):'');
+    btnIn.disabled=true; btnOut.disabled=false;
+  } else {
+    // 退勤済み → 両ボタン無効（1日1回のみ）
+    S.clockedIn=false;
+    sb.textContent=t('statusOut'); sb.className='badge b-out';
+    document.getElementById('clk-info').textContent=
+      '出勤: '+todayRec.in+'　退勤: '+todayRec.out+'　実働: '+todayRec.actual+'h';
+    btnIn.disabled=true; btnOut.disabled=true;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  打刻
+// ═══════════════════════════════════════════════
+async function clockIn(){
+  // 本日すでに打刻済みなら拒否
+  const todayKey=dkey(new Date());
+  if(CACHE.att.some(a=>a.uid===S.user.id&&a.date===todayKey)){
+    alert('本日はすでに出勤打刻済みです。\n1日1回のみ打刻できます。');
+    restoreClockState();
+    return;
+  }
+  const now=new Date();
+  const recId=aid();
+  S.clockedIn=true; S.clockInTime=now; S.pendingAttId=recId;
+  const u=DB.findUser(S.user.id)||S.user;
+  const customDaysOff=u.customDaysOff||[];
+  S.isHolWork=isHol(now)||customDaysOff.includes(now.getDay());
+  const inMin=now.getHours()*60+now.getMinutes();
+  const customStart=u.customStart||'08:00';
+  const [sh,sm]=customStart.split(':').map(Number);
+  S.isLate=!S.isHolWork&&inMin>sh*60+sm;
+  const sb=document.getElementById('status-badge');
+  sb.textContent='出勤中'; sb.className='badge b-in';
+  document.getElementById('late-badge').classList.toggle('hidden',!S.isLate);
+  document.getElementById('btn-in').disabled=true;
+  document.getElementById('btn-out').disabled=false;
+  document.getElementById('clk-info').textContent='出勤: '+fhm(now)+(S.isHolWork?' 🔶 休日出勤':S.isLate?' ⚠ 遅刻':'');
+  // 出勤時点でFirebaseに書き込む（out=''で出勤中を表す）
+  const initRec={id:recId,uid:S.user.id,date:dkey(now),in:fhm(now),out:'',actual:0,ot:0,
+    type:S.isHolWork?'休日出勤中':S.isLate?'遅刻出勤中':'出勤中',inLoc:null,outLoc:null};
+  await DB.addAtt(initRec);
+  // 位置情報を取得してレコードを更新
+  S.inLoc=null;
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      async pos=>{
+        S.inLoc={lat:pos.coords.latitude,lng:pos.coords.longitude};
+        await DB.updateAtt(recId,{inLoc:S.inLoc});
+      },
+      ()=>{ S.inLoc=null; },
+      {timeout:10000,maximumAge:0}
+    );
+  }
+}
+function clockOut(){
+  if(!S.clockedIn) return;
+  document.getElementById('btn-out').disabled=true;
+  const out=new Date(), inT=S.clockInTime;
+  const totalMin=(out-inT)/60000;
+  const uObj=DB.findUser(S.user.id)||S.user;
+  const actualMin=Math.max(0,totalMin-breakMin(uObj));
+  const actualH=roundH(actualMin/60);
+  const ot=calcOT(actualH, uObj);
+  const autoType=S.isHolWork?'休日出勤':S.isLate?'遅刻':'出勤';
+  // 退勤時の位置情報取得 → 種別確認モーダル表示
+  function showTypeModal(outLoc){
+    S.pendingRec={id:aid(),uid:S.user.id,date:dkey(inT),in:fhm(inT),out:fhm(out),
+      actual:actualH,ot,type:autoType,inLoc:S.inLoc||null,outLoc:outLoc||null};
+    document.getElementById('type-modal-info').textContent=
+      '退勤: '+fhm(out)+'　実働: '+actualH+'h　残業: '+ot+'h'+(outLoc?'　📍位置取得済':'');
+    document.getElementById('type-select').value=autoType;
+    document.getElementById('type-modal').classList.add('open');
+  }
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos=>showTypeModal({lat:pos.coords.latitude,lng:pos.coords.longitude}),
+      ()=>showTypeModal(null),
+      {timeout:8000,maximumAge:0}
+    );
+  } else { showTypeModal(null); }
+}
+async function confirmClockOut(){
+  if(!S.pendingRec) return;
+  S.pendingRec.type = document.getElementById('type-select').value;
+  const rec = S.pendingRec;
+  const attId = S.pendingAttId;
+  S.pendingRec = null;
+  document.getElementById('type-modal').classList.remove('open');
+  S.clockedIn=false; S.clockInTime=null; S.isLate=false; S.isHolWork=false; S.inLoc=null; S.pendingAttId=null;
+  const sb=document.getElementById('status-badge');
+  sb.textContent='退勤済'; sb.className='badge b-out';
+  document.getElementById('late-badge').classList.add('hidden');
+  document.getElementById('btn-in').disabled=true;  // 1日1回のみ
+  document.getElementById('btn-out').disabled=true;
+  document.getElementById('clk-info').textContent='出勤: '+rec.in+'　退勤: '+rec.out+'　実働: '+rec.actual+'h　残業: '+rec.ot+'h';
+  // 既存レコードを更新（新規追加ではなく）
+  if(attId){
+    await DB.updateAtt(attId,{out:rec.out,actual:rec.actual,ot:rec.ot,type:rec.type,outLoc:rec.outLoc||null});
+  } else {
+    await DB.addAtt(rec);
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  統計
+// ═══════════════════════════════════════════════
+function updateStats(){
+  if(!S.user) return;
+  const {s,e}=getPeriod(new Date());
+  const recs=DB.attOf(S.user.id).filter(r=>r.date>=s&&r.date<=e&&r.type!=='欠勤');
+  const days=recs.length, ot=recs.reduce((a,r)=>a+r.ot,0);
+  const uObj=DB.findUser(S.user.id)||S.user;
+  document.getElementById('s-days').textContent=days+'日';
+  document.getElementById('s-sched').textContent=(days*prescribedH(uObj)).toFixed(1)+'h';
+  document.getElementById('s-ot').textContent=Math.round(ot*10)/10+'h';
+  const u=DB.findUser(S.user.id);
+  if(S.user.type==='employee'||S.user.type==='admin'){
+    document.getElementById('s-leave').textContent=(u?.leaveDays??0)+'日';
+    document.getElementById('s-leave-lbl').textContent='有給残日数';
+  } else {
+    document.getElementById('s-leave').textContent='—';
+    document.getElementById('s-leave-lbl').textContent='有給（外注：なし）';
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  履歴テーブル
+// ═══════════════════════════════════════════════
+function initHistFilters(){
+  const yEl=document.getElementById('hist-year');
+  const mEl=document.getElementById('hist-month');
+  if(yEl.options.length) return; // 初期化済み
+  const p=currentPeriodDate();
+  [2024,2025,2026,2027].forEach(y=>{
+    const o=document.createElement('option');
+    o.value=y; o.textContent=y+'年';
+    if(y===p.getFullYear()) o.selected=true;
+    yEl.appendChild(o);
+  });
+  for(let i=1;i<=12;i++){
+    const o=document.createElement('option');
+    o.value=i; o.textContent=i+'月';
+    if(i===p.getMonth()+1) o.selected=true;
+    mEl.appendChild(o);
+  }
+}
+function renderHistTable(){
+  if(!S.user) return;
+  initHistFilters();
+  const y=parseInt(document.getElementById('hist-year').value);
+  const m=parseInt(document.getElementById('hist-month').value)-1;
+  // 締め期間：前月21日〜当月20日
+  const from=dkey(new Date(y,m-1,21));
+  const to  =dkey(new Date(y,m,20));
+  const recs=DB.attOf(S.user.id)
+    .filter(r=>r.date>=from&&r.date<=to)
+    .sort((a,b)=>b.date.localeCompare(a.date));
+
+  // サマリー
+  const days=recs.filter(r=>r.out&&!r.type?.includes('休日')).length;
+  const totalH=recs.reduce((s,r)=>s+(r.actual||0),0);
+  const totalOT=recs.reduce((s,r)=>s+(r.ot||0),0);
+  document.getElementById('hist-summary').innerHTML=`
+    <div class="stat"><div class="slbl">出勤日数</div><div class="sval">${days}日</div></div>
+    <div class="stat"><div class="slbl">実働合計</div><div class="sval">${totalH.toFixed(1)}h</div></div>
+    <div class="stat"><div class="slbl">残業合計</div><div class="sval" style="color:${totalOT>0?'var(--warn)':'var(--text)'}">${totalOT.toFixed(1)}h</div></div>`;
+
+  const tb=document.getElementById('hist-body');
+  if(!recs.length){
+    tb.innerHTML='<tr><td colspan="6" style="color:var(--muted);padding:16px;text-align:center;font-size:12px">この期間の打刻記録はありません</td></tr>';
+    return;
+  }
+  tb.innerHTML=recs.map(r=>{
+    const isToday=r.date===dkey(new Date());
+    const otB=r.ot>0?`<span class="b-ot" style="font-size:10px">+${r.ot}h</span>`:'<span style="color:var(--muted)">—</span>';
+    const tyB=typeBadge(r.type);
+    const outTxt=r.out||(isToday?'<span class="b-in" style="font-size:10px;padding:2px 6px;border-radius:8px">出勤中</span>':'<span style="color:var(--muted)">—</span>');
+    const bg=isToday?'background:var(--al)':'';
+    const actualTxt=r.actual?`${r.actual}h`:'<span style="color:var(--muted)">—</span>';
+    // 日付を見やすく
+    const dt=new Date(r.date+'T00:00:00');
+    const dayNames=['日','月','火','水','木','金','土'];
+    const dow=dayNames[dt.getDay()];
+    const dowColor=dt.getDay()===0?'var(--danger)':dt.getDay()===6?'var(--info)':'var(--text)';
+    const dateStr=`${r.date.slice(5).replace('-','/')}<span style="color:${dowColor};font-size:10px;margin-left:2px">(${dow})</span>`;
+    return`<tr style="${bg}">
+      <td style="white-space:nowrap;font-size:12px">${dateStr}</td>
+      <td style="font-size:12px;font-weight:600;color:var(--accent)">${r.in}</td>
+      <td style="font-size:12px">${outTxt}</td>
+      <td style="font-size:12px;text-align:right">${actualTxt}</td>
+      <td style="font-size:12px;text-align:right">${otB}</td>
+      <td style="font-size:11px">${tyB}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  カレンダー
+// ═══════════════════════════════════════════════
+function renderCal(){
+  if(!S.user) return;
+  const y=S.calY,m=S.calM;
+  document.getElementById('cal-title').textContent=y+'年'+(m+1)+'月';
+  const heads=['日','月','火','水','木','金','土'];
+  const hcols=['var(--danger)','var(--muted)','var(--muted)','var(--muted)','var(--muted)','var(--muted)','var(--info)'];
+  document.getElementById('cal-head').innerHTML=heads.map((h,i)=>`<div class="cal-head" style="color:${hcols[i]}">${h}</div>`).join('');
+  const first=new Date(y,m,1).getDay(), last=new Date(y,m+1,0).getDate();
+  const todayKey=dkey(new Date());
+  const wm={};
+  (S.user.type==='admin'?DB.allAtt:DB.attOf(S.user.id)).forEach(r=>{wm[r.date]=r.type;});
+  let cells='';
+  for(let i=0;i<first;i++) cells+='<div></div>';
+  const hols=[];
+  for(let d=1;d<=last;d++){
+    const dt=new Date(y,m,d), k=dkey(dt), dow=dt.getDay();
+    let cls='cal-cell';
+    if(k===todayKey) cls+=' cc-today';
+    else if(wm[k]==='遅刻') cls+=' cc-late';
+    else if(wm[k]) cls+=' cc-work';
+    else if(isHol(dt)) cls+=' cc-hol';
+    if(SPECIAL_WORK_DAYS.has(k)) cls+=' cc-work'; // 振替出勤はcc-workで上書き
+    const holName=(HOL_NAMES[k]||HOL_NAMES_EXTRA[k]||'')||(COMPANY_OFFS.has(k)?'会社休日':'');
+    if(holName) hols.push(d+'日 '+holName);
+    if(SPECIAL_WORK_DAYS.has(k)&&!wm[k]) hols.push(d+'日 振替出勤日');
+    cells+=`<div class="${cls}">${d}</div>`;
+  }
+  document.getElementById('cal-body').innerHTML=cells;
+  document.getElementById('cal-hols').textContent=hols.join('　');
+}
+function prevM(){S.calM--;if(S.calM<0){S.calM=11;S.calY--;}renderCal();}
+function nextM(){S.calM++;if(S.calM>11){S.calM=0;S.calY++;}renderCal();}
+
+// ═══════════════════════════════════════════════
+//  休暇申請（社員・外注用）
+// ═══════════════════════════════════════════════
+function buildLeaveUI(){
+  if(!S.user) return;
+  const note=document.getElementById('leave-contractor-note');
+  const sel=document.getElementById('lv-type');
+  const empTypes = ['有給','半休（午前）','半休（午後）','遅刻','早退','中抜け','欠勤','特別休暇'];
+  const conTypes = ['遅刻','早退','中抜け','欠勤'];
+  if(S.user.type==='contractor'){
+    note.classList.remove('hidden');
+    note.textContent='外注の方は有給休暇・半休の対象外です。';
+    sel.innerHTML = conTypes.map(t=>`<option>${t}</option>`).join('');
+  } else {
+    // 社員・管理者は全種別使用可
+    note.classList.add('hidden');
+    sel.innerHTML = empTypes.map(t=>`<option>${t}</option>`).join('');
+  }
+  renderLeaveList();
+}
+async function applyLeave(){
+  const type=document.getElementById('lv-type').value;
+  const dateVal=document.getElementById('lv-date').value;
+  const note=document.getElementById('lv-note').value.trim();
+  const errEl=document.getElementById('lv-err');
+  errEl.textContent='';
+  if(!dateVal){errEl.textContent='日付を選択してください';return;}
+  // 有給・半休は有給残確認
+  const u=DB.findUser(S.user.id);
+  const isHalf=type.startsWith('半休');
+  const isPaid=type==='有給'||isHalf;
+  if((S.user.type==='employee'||S.user.type==='admin')&&isPaid){
+    const deduct=isHalf?0.5:1;
+    if(u.leaveDays<deduct){errEl.textContent='有給残日数が不足しています';return;}
+    await DB.updateUser(S.user.id,{leaveDays:Math.round((u.leaveDays-deduct)*10)/10});
+    await DB.addLeave({id:lid(),uid:S.user.id,type,date:dateVal,status:'承認待ち',deduct,note,appliedAt:dkey(new Date())});
+  } else {
+    // 遅刻・早退・中抜け・欠勤など → 承認待ちで登録
+    await DB.addLeave({id:lid(),uid:S.user.id,type,date:dateVal,status:'承認待ち',deduct:0,note,appliedAt:dkey(new Date())});
+  }
+  document.getElementById('lv-date').value='';
+  document.getElementById('lv-note').value='';
+}
+function renderLeaveList(){
+  if(!S.user) return;
+  const el=document.getElementById('leave-list');
+  const recs=DB.leaveOf(S.user.id);
+  if(!recs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">申請はありません</div>';return;}
+  el.innerHTML=recs.map(r=>{
+    const sb=r.status==='承認待ち'?'b-pend':r.status==='承認済'?'b-appr':r.status==='却下'?'b-rej':'b-off';
+    const dd=r.deduct>0?` (−${r.deduct}日)`:'';
+    return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid #f0ede8"><span style="font-size:13px;flex:1">${r.date}</span><span style="font-size:12px;color:var(--muted)">${r.type}${dd}</span><span class="badge ${sb}" style="font-size:11px">${r.status}</span></div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  QRコード
+// ═══════════════════════════════════════════════
+function getQRUrl(){
+  // カスタムURL入力欄に値があればそちらを優先
+  const custom=(document.getElementById('qr-custom-url')?.value||'').trim();
+  if(custom) return custom;
+  return location.href.split('?')[0];
+}
+function renderQRCode(url){
+  const el=document.getElementById('qr-canvas');
+  el.innerHTML='';
+  try{new QRCode(el,{text:url,width:200,height:200,correctLevel:QRCode.CorrectLevel.M});}
+  catch(e){el.textContent='QRコードの生成に失敗しました。';el.style.cssText='font-size:12px;color:var(--muted)';}
+}
+function applyCustomQR(){
+  S.qrDone=false; // 再生成を許可
+  initQR();
+}
+function initQR(){
+  const rawUrl=location.href.split('?')[0];
+  const proto=location.protocol;
+  const host=location.hostname;
+  const warnEl=document.getElementById('qr-warn');
+  const inputEl=document.getElementById('qr-custom-url');
+
+  // ── URL問題の検出 ──
+  let warnMsg='';
+  if(proto==='file:'){
+    warnMsg='⚠ ローカルファイル（file://）で開いているため、スマホからはアクセスできません。<br>'
+      +'Firebase Hosting や GitHub Pages などにアップロードして、その URL を下の入力欄に入力してください。';
+  } else if(host==='localhost'||host==='127.0.0.1'){
+    warnMsg='⚠ localhost で動作中のため、スマホからはアクセスできません。<br>'
+      +'同一 Wi-Fi 内の PC の LAN IP（例: 192.168.x.x）でアクセスして URL を入力するか、外部公開 URL を入力してください。';
+  }
+  if(warnMsg){
+    warnEl.innerHTML=warnMsg;
+    warnEl.classList.remove('hidden');
+  } else {
+    warnEl.classList.add('hidden');
+  }
+
+  const url=getQRUrl();
+  // 入力欄にデフォルト値を補完
+  if(inputEl&&!inputEl.value) inputEl.value=rawUrl;
+  document.getElementById('qr-url').textContent=url;
+
+  if(S.qrDone) return;
+  renderQRCode(url);
+  S.qrDone=true;
+}
+function copyURL(){
+  navigator.clipboard.writeText(getQRUrl()).then(()=>{
+    const b=document.getElementById('copy-btn'); b.textContent='コピーしました！';
+    setTimeout(()=>{b.textContent='URLをコピー';},2000);
+  }).catch(()=>alert(location.href.split('?')[0]));
+}
+
+// ═══════════════════════════════════════════════
+//  管理者：ダッシュボード
+// ═══════════════════════════════════════════════
+function renderAdminDash(){
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  const todayKey=dkey(new Date());
+  const todayAtt=DB.allAtt.filter(r=>r.date===todayKey);
+  const pendLeave=DB.allLeave.filter(r=>r.status==='承認待ち');
+  document.getElementById('a-total').textContent=users.length+'人';
+  document.getElementById('a-today').textContent=todayAtt.length+'件';
+  document.getElementById('a-pend').textContent=pendLeave.length+'件';
+  const el=document.getElementById('today-status-list');
+  if(!users.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">ユーザーがいません</div>';return;}
+  el.innerHTML=users.map(u=>{
+    const att=todayAtt.find(r=>r.uid===u.id);
+    const isWorking=att&&att.out==='';
+    const badge=att?(isWorking?'<span class="badge b-in" style="font-size:10px">出勤中</span>':typeBadge(att.type)):'<span class="badge b-off" style="font-size:10px">未出勤</span>';
+    const locB=att?locLinks(att.inLoc,att.outLoc):'';
+    const info=att?(isWorking?`${att.in}〜 出勤中`:`${att.in}〜${att.out} 実働${att.actual}h`):'';
+    return`<div class="user-row">
+      <div class="user-avatar" style="background:${u.type==='employee'?'var(--il)':'var(--pl)'};color:${u.type==='employee'?'var(--info)':'var(--purple)'}">${u.name.slice(0,1)}</div>
+      <div style="flex:1"><div style="font-size:13px;font-weight:500">${u.name}</div><div style="font-size:11px;color:var(--muted)">${info} ${locB}</div></div>
+      ${badge}
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  管理者：社員管理
+// ═══════════════════════════════════════════════
+function renderUserMgmt(){
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  const el=document.getElementById('user-mgmt-list');
+  if(!users.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">ユーザーがいません</div>';return;}
+  el.innerHTML=users.map((u,i)=>{
+    const vis=u.visible!==false;
+    const isFirst=i===0, isLast=i===users.length-1;
+    return`<div class="user-row" style="opacity:${vis?'1':'0.45'}">
+      <div style="display:flex;flex-direction:column;gap:2px;margin-right:2px">
+        <button class="btn btn-xs" style="padding:0 5px;font-size:10px;min-width:22px;line-height:18px" ${isFirst?'disabled':''} onclick="moveUserOrder('${u.id}',-1)">▲</button>
+        <button class="btn btn-xs" style="padding:0 5px;font-size:10px;min-width:22px;line-height:18px" ${isLast?'disabled':''} onclick="moveUserOrder('${u.id}',1)">▼</button>
+      </div>
+      <div class="user-avatar" style="background:${u.type==='employee'?'var(--il)':'var(--pl)'};color:${u.type==='employee'?'var(--info)':'var(--purple)'}">${u.name.slice(0,1)}</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:500">${u.name} <span class="badge ${u.type==='employee'?'b-emp':'b-con'}" style="font-size:10px">${u.type==='employee'?'社員':'外注'}</span></div>
+        <div style="font-size:11px;color:var(--muted)">${u.empNo?'No. '+u.empNo+'　':''}${u.type==='employee'?'有給残: '+u.leaveDays+'日':'有給なし'}${u.customPrescribedH?'　<span class="badge b-custom">変形労働</span>':''}</div>
+      </div>
+      <button class="btn btn-xs" style="min-width:52px;background:${vis?'var(--al)':'#f0ede8'};color:${vis?'var(--at)':'var(--muted)'};border-color:${vis?'var(--at)':'var(--border)'}" onclick="toggleUserVisible('${u.id}')">${vis?'表示中':'非表示'}</button>
+      <button class="btn btn-sm btn-xs" onclick="openEditUser('${u.id}')">編集</button>
+      <button class="btn btn-d btn-xs" onclick="deleteUser('${u.id}')">削除</button>
+    </div>`;
+  }).join('');
+}
+async function moveUserOrder(id, dir){
+  // displayOrder 順でソートした配列を作り、位置を入れ替えて順番を再採番
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  const idx=users.findIndex(u=>u.id===id);
+  const swapIdx=idx+dir;
+  if(swapIdx<0||swapIdx>=users.length) return;
+  [users[idx],users[swapIdx]]=[users[swapIdx],users[idx]];
+  // 全員に連番で displayOrder を振り直す
+  await Promise.all(users.map((u,i)=>DB.updateUser(u.id,{displayOrder:i})));
+  // ログイン画面・管理画面に即時反映
+  renderUserMgmt();
+  renderLoginList();
+}
+async function toggleUserVisible(id){
+  const u=DB.findUser(id);
+  if(!u) return;
+  await DB.updateUser(id,{visible: u.visible===false ? true : false});
+  renderUserMgmt();
+  renderLoginList();
+}
+function openAddUser(){
+  S.editingUID=null;
+  document.getElementById('user-modal-title').textContent='社員追加';
+  document.getElementById('m-empno').value='';
+  document.getElementById('m-name').value='';
+  document.getElementById('m-pw').value='';
+  document.getElementById('m-type').value='employee';
+  document.getElementById('m-grant').value='10';
+  document.getElementById('m-leave').value='10';
+  document.getElementById('m-lexpiry').value='';
+  document.getElementById('m-cstart').value='';
+  document.getElementById('m-cend').value='';
+  document.getElementById('m-cph').value='';
+  for(let i=0;i<7;i++) document.getElementById('m-cdoff-'+i).checked=false;
+  document.getElementById('m-pin-bottom').checked=false;
+  document.getElementById('m-err').textContent='';
+  document.getElementById('user-modal').classList.add('open');
+}
+function openEditUser(id){
+  const u=DB.findUser(id);
+  S.editingUID=id;
+  document.getElementById('user-modal-title').textContent='ユーザー編集';
+  document.getElementById('m-empno').value=u.empNo||'';
+  document.getElementById('m-name').value=u.name;
+  document.getElementById('m-pw').value=u.pw;
+  document.getElementById('m-type').value=u.type;
+  document.getElementById('m-grant').value=u.grantDays!=null?u.grantDays:u.leaveDays;
+  document.getElementById('m-leave').value=u.leaveDays;
+  document.getElementById('m-lexpiry').value=u.leaveExpiry||'';
+  document.getElementById('m-cstart').value=u.customStart||'';
+  document.getElementById('m-cend').value=u.customEnd||'';
+  document.getElementById('m-cph').value=u.customPrescribedH||'';
+  const doff=u.customDaysOff||[];
+  for(let i=0;i<7;i++) document.getElementById('m-cdoff-'+i).checked=doff.includes(i);
+  document.getElementById('m-pin-bottom').checked=!!u.pinBottom;
+  document.getElementById('m-err').textContent='';
+  document.getElementById('user-modal').classList.add('open');
+}
+async function saveUser(){
+  const empNo=document.getElementById('m-empno').value.trim();
+  const name=document.getElementById('m-name').value.trim();
+  const pw=document.getElementById('m-pw').value;
+  const type=document.getElementById('m-type').value;
+  const grantDays=parseFloat(document.getElementById('m-grant').value)||0;
+  const leaveDays=parseFloat(document.getElementById('m-leave').value)||0;
+  const leaveExpiry=document.getElementById('m-lexpiry').value||null;
+  const customStart=document.getElementById('m-cstart').value||null;
+  const customEnd=document.getElementById('m-cend').value||null;
+  const customPrescribedH=parseFloat(document.getElementById('m-cph').value)||null;
+  const customDaysOff=[0,1,2,3,4,5,6].filter(i=>document.getElementById('m-cdoff-'+i).checked);
+  const errEl=document.getElementById('m-err');
+  if(!name){errEl.textContent='氏名を入力してください';return;}
+  if(!pw){errEl.textContent='パスワードを入力してください';return;}
+  if(empNo){
+    const dup=DB.users.find(u=>u.empNo===empNo&&u.id!==S.editingUID);
+    if(dup){errEl.textContent='社員番号「'+empNo+'」はすでに使用されています';return;}
+  }
+  const pinBottom=document.getElementById('m-pin-bottom').checked;
+  const patch={empNo,name,pw,type,grantDays,leaveDays,leaveExpiry,customStart,customEnd,customPrescribedH,customDaysOff,pinBottom};
+  if(S.editingUID){
+    // 有給付与チェック（残日数が増えた場合に通知）
+    if(type==='employee'){
+      const oldU=DB.findUser(S.editingUID);
+      const oldDays=oldU?oldU.leaveDays:0;
+      if(leaveDays>oldDays){
+        const added=Math.round((leaveDays-oldDays)*10)/10;
+        const msg=`【有給付与】${name}さんに有給休暇が${added}日付与されました（残日数：${leaveDays}日${leaveExpiry?' / 有効期限：'+leaveExpiry:''})`;
+        const createdAt=new Date().toISOString();
+        await DB.addNotif({id:nid(),toUid:S.editingUID,fromUid:'admin',type:'leave_grant',date:dkey(new Date()),message:msg,read:false,createdAt});
+        await notifyAllAdmins({fromUid:'admin',type:'leave_grant',date:dkey(new Date()),message:msg,read:false,createdAt});
+      }
+    }
+    await DB.updateUser(S.editingUID,patch);
+  } else {
+    const maxOrder=Math.max(-1,...CACHE.users.filter(u=>u.type!=='admin'&&u.displayOrder!=null).map(u=>u.displayOrder));
+    await DB.addUser({id:uid(),...patch,displayOrder:maxOrder+1});
+  }
+  closeModal('user-modal');
+}
+async function deleteUser(id){
+  if(!confirm('このユーザーを削除しますか？\n打刻データも削除されます。')) return;
+  await DB.deleteUserData(id);
+}
+async function initLeaveData(){
+  if(!confirm('全社員の有給残日数と有効期限を一括設定します。\n既存の値は上書きされます。よろしいですか？')) return;
+  const leaveMap=[
+    {name:'佐野 香織',              leaveDays:31,   leaveExpiry:'2027-01-20'},
+    {name:'南 正樹',                leaveDays:30,   leaveExpiry:'2026-12-20'},
+    {name:'柳 美気邦',              leaveDays:25.5, leaveExpiry:'2026-09-15'},
+    {name:'ルワン',                  leaveDays:10,   leaveExpiry:'2027-01-20'},
+    {name:'サマン',                  leaveDays:18,   leaveExpiry:'2027-03-31'},
+    {name:'プリヤンタ',              leaveDays:10,   leaveExpiry:'2026-08-20'},
+    {name:'後藤 晃',                leaveDays:24,   leaveExpiry:'2026-05-20'},
+    {name:'望月 秀男',              leaveDays:9,    leaveExpiry:'2026-07-05'},
+    {name:'片 ナッタポール',         leaveDays:21,   leaveExpiry:'2026-07-20'},
+    {name:'庭野 信也',              leaveDays:21,   leaveExpiry:'2027-04-16'},
+    {name:'渡井 由美子',            leaveDays:15,   leaveExpiry:'2026-12-20'},
+    {name:'ブイ ダン ソン',          leaveDays:13,   leaveExpiry:'2026-05-01'},
+    {name:'グェン チャン ティン',    leaveDays:16,   leaveExpiry:'2026-05-01'},
+    {name:'杉山 太',                leaveDays:11,   leaveExpiry:'2026-09-20'},
+    {name:'宇佐美 遼真',            leaveDays:14,   leaveExpiry:'2026-09-30'},
+    {name:'佐野 文海',              leaveDays:4,    leaveExpiry:'2026-09-30'},
+    {name:'渡邉 晴彦',              leaveDays:6,    leaveExpiry:'2026-11-20'},
+    {name:'ヘンドリク エデイカ プトラ', leaveDays:10, leaveExpiry:'2027-01-05'},
+    {name:'ズリアン ヌル ロフマン',  leaveDays:10,   leaveExpiry:'2027-01-05'},
+    {name:'カサン シャイフッディン', leaveDays:10,   leaveExpiry:'2027-01-05'},
+    {name:'ファム ビン マン',        leaveDays:10,   leaveExpiry:'2027-05-31'},
+    {name:'ファン バン フー',        leaveDays:10,   leaveExpiry:'2027-05-31'},
+  ];
+  // スペースを除去して照合（登録名の表記ゆれに対応）
+  const norm=s=>s.replace(/\s/g,'');
+  let updated=0, notFound=[];
+  for(const d of leaveMap){
+    const u=CACHE.users.find(u=>norm(u.name)===norm(d.name));
+    if(u){ await DB.updateUser(u.id,{grantDays:d.leaveDays,leaveDays:d.leaveDays,leaveExpiry:d.leaveExpiry}); updated++; }
+    else notFound.push(d.name);
+  }
+  let msg=`${updated}名の有給データを設定しました。`;
+  if(notFound.length) msg+=`\n\n未マッチ（登録名を確認）:\n${notFound.join('\n')}`;
+  alert(msg);
+  renderUserMgmt();
+}
+// ═══════════════════════════════════════════════
+//  日報 → Excel書き込み
+// ═══════════════════════════════════════════════
+function dateToExcelSerial(dateStr){
+  const d=new Date(dateStr);
+  const base=new Date(1899,11,30);
+  return Math.round((d-base)/(1000*60*60*24));
+}
+function getSheetNameForDate(dateStr){
+  const d=new Date(dateStr);
+  const day=d.getDate();
+  let sy=d.getFullYear(),sm=d.getMonth()+1;
+  if(day<=20){sm--;if(sm===0){sm=12;sy--;}}
+  let ey=sy,em=sm+1;
+  if(em===13){em=1;ey++;}
+  if(sy===ey) return `${sy}.${sm}.21～${em}.20`;
+  return `${sy}.${sm}.21～${ey}.${em}.20 `;
+}
+async function exportToExcel(){
+  if(!window.XLSX){ alert('SheetJSが読み込まれていません。ページを再読み込みしてください。'); return; }
+  if(!window.showOpenFilePicker){ alert('このブラウザはファイル直接書き込みに対応していません。ChromeまたはEdgeをお使いください。'); return; }
+  // ファイル選択
+  let fh;
+  try{
+    [fh]=await window.showOpenFilePicker({types:[{description:'Excelファイル',accept:{'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet':['.xlsx']}}]});
+  }catch(e){ return; } // キャンセル
+
+  const file=await fh.getFile();
+  const buf=await file.arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array',cellStyles:true,bookVBA:true});
+
+  // 全日報を処理
+  let added=0, skipped=0, noSheet=[];
+  const allReports=CACHE.reports.slice().sort((a,b)=>a.date.localeCompare(b.date));
+
+  for(const r of allReports){
+    const u=DB.findUser(r.uid);
+    if(!u) continue;
+    const sheetName=getSheetNameForDate(r.date);
+    // シート名の末尾スペースあり・なし両方試す
+    const ws=wb.Sheets[sheetName]||wb.Sheets[sheetName.trim()]||wb.Sheets[sheetName+'　'];
+    if(!ws){
+      if(!noSheet.includes(sheetName)) noSheet.push(sheetName);
+      continue;
+    }
+    // 既存データ取得（A列の日付+B列の名前+C列の物件番号で重複チェック）
+    const range=XLSX.utils.decode_range(ws['!ref']||'A1');
+    const existing=new Set();
+    for(let row=1;row<=range.e.r;row++){
+      const dc=ws[XLSX.utils.encode_cell({r:row,c:0})];
+      const nc=ws[XLSX.utils.encode_cell({r:row,c:1})];
+      const pc=ws[XLSX.utils.encode_cell({r:row,c:2})];
+      if(dc&&nc&&pc) existing.add(`${dc.v}|${nc.v}|${pc.v}`);
+    }
+
+    for(const it of (r.items||[])){
+      const serial=dateToExcelSerial(r.date);
+      const bkNo=parseInt(it.no)||it.no||0;
+      const key=`${serial}|${u.name}|${bkNo}`;
+      if(existing.has(key)){ skipped++; continue; }
+
+      // 新しい行を追加
+      const newRow=range.e.r+1;
+      range.e.r=newRow;
+      ws['!ref']=XLSX.utils.encode_range(range);
+
+      const encode=(c)=>XLSX.utils.encode_cell({r:newRow,c});
+      const sn=wb.SheetNames.find(n=>n===sheetName||n===sheetName.trim());
+      // A: 日付（シリアル）
+      ws[encode(0)]={v:serial,t:'n',z:'YYYY/M/D'};
+      // B: 名前
+      ws[encode(1)]={v:u.name,t:'s'};
+      // C: 物件番号
+      ws[encode(2)]={v:bkNo,t:'n'};
+      // D: 物件名（VLOOKUP）
+      ws[encode(3)]={f:`IFERROR(VLOOKUP('${sn}'!C${newRow+1},物件番号!$B:$C,2,FALSE),"")`,t:'s',v:it.name||''};
+      // E: 工区（空欄）
+      ws[encode(4)]={v:'',t:'s'};
+      // F: 作業番号（空欄）
+      ws[encode(5)]={v:'',t:'s'};
+      // G: 作業内容（１）― カテゴリ（作業1）
+      const _sg=CACHE.sagyo.find(s=>s.label===it.content);
+      ws[encode(6)]={v:_sg?(_sg.category||''):(it.content||''),t:'s'};
+      // H: 作業内容（２）― 作業内容ラベル（作業2）
+      ws[encode(7)]={v:it.content||'',t:'s'};
+      // I: 柱
+      ws[encode(8)]={v:it.hashira||0,t:'n'};
+      // J: 梁
+      ws[encode(9)]={v:it.hari||0,t:'n'};
+      // K: 時間
+      ws[encode(10)]={v:it.hours,t:'n'};
+      // L: 行先
+      ws[encode(11)]={v:it.yukisaki||'',t:'s'};
+
+      existing.add(key);
+      added++;
+    }
+  }
+
+  // 保存
+  const wbout=XLSX.write(wb,{bookType:'xlsx',type:'array',cellStyles:true});
+  const writable=await fh.createWritable();
+  await writable.write(new Blob([wbout],{type:'application/octet-stream'}));
+  await writable.close();
+
+  let msg=`${added}行をExcelに書き込みました。`;
+  if(skipped) msg+=`\n重複スキップ: ${skipped}行`;
+  if(noSheet.length) msg+=`\n\n該当シートなし（手動でシート作成が必要）:\n${noSheet.join('\n')}`;
+  alert(msg);
+}
+
+// 全管理者へ通知を一括送信するヘルパー
+async function notifyAllAdmins(baseRec){
+  const admins=CACHE.users.filter(u=>u.type==='admin');
+  for(const a of admins){
+    await DB.addNotif({...baseRec,id:nid(),toUid:a.id});
+  }
+}
+async function checkLeaveExpiry(){
+  // 有給時効通知: 2か月前・1か月前の2段階で通知
+  const today=new Date();
+  const todayKey=dkey(today);
+  const employees=CACHE.users.filter(u=>u.type==='employee'&&u.leaveExpiry&&u.leaveDays>0);
+  for(const u of employees){
+    const expiry=new Date(u.leaveExpiry);
+    const diffDays=Math.round((expiry-today)/(1000*60*60*24));
+    // 60日以内かつ0日以上（期限切れ前）
+    if(diffDays<0||diffDays>60) continue;
+    // 通知フェーズ判定（60日前 or 30日前）
+    const phase=diffDays<=30?'1month':'2month';
+    const alreadySent=CACHE.notif.some(n=>
+      n.type==='leave_expiry'&&n.toUid===u.id&&n.meta===phase&&
+      // 同フェーズで過去7日以内に送信済みならスキップ
+      Math.abs(new Date(n.createdAt||n.date)-today)<7*24*60*60*1000
+    );
+    if(!alreadySent){
+      const label=phase==='1month'?'【有給時効まで1か月】':'【有給時効まで2か月】';
+      const msg=`${label}${u.name}さんの有給休暇（残${u.leaveDays}日）が残り${diffDays}日で時効消滅します（有効期限：${u.leaveExpiry}）。有給は付与日から2年を経過すると時効により消滅します。`;
+      const createdAt=new Date().toISOString();
+      await DB.addNotif({id:nid(),toUid:u.id,fromUid:'admin',type:'leave_expiry',meta:phase,date:todayKey,message:msg,read:false,createdAt});
+      await notifyAllAdmins({fromUid:u.id,type:'leave_expiry',meta:phase,date:todayKey,message:msg,read:false,createdAt});
+    }
+  }
+}
+async function checkLeaveObligation(){
+  // 年10日以上付与者は年5日取得義務（労働基準法第39条第7項）
+  const today=new Date();
+  const todayKey=dkey(today);
+  const employees=CACHE.users.filter(u=>u.type==='employee'&&u.leaveExpiry&&(u.grantDays||0)>=10);
+  for(const u of employees){
+    const expiry=new Date(u.leaveExpiry);
+    // 付与日 = 有効期限の2年前
+    const grantDate=new Date(expiry);
+    grantDate.setFullYear(grantDate.getFullYear()-2);
+    const year1End=new Date(grantDate);
+    year1End.setFullYear(year1End.getFullYear()+1);
+    // 現在どの年度か判定
+    let periodStart,periodEnd;
+    if(today<=year1End){
+      periodStart=grantDate; periodEnd=year1End;
+    } else if(today<=expiry){
+      periodStart=year1End; periodEnd=expiry;
+    } else {
+      continue; // 有効期限切れ
+    }
+    const daysLeft=Math.round((periodEnd-today)/(1000*60*60*24));
+    if(daysLeft>90) continue; // まだ余裕あり
+    // 対象期間内の承認済み有給取得合計
+    const pStartKey=dkey(periodStart);
+    const pEndKey=dkey(periodEnd);
+    const takenDays=CACHE.leave
+      .filter(r=>r.uid===u.id&&r.status==='承認済'&&r.deduct>0&&r.date>=pStartKey&&r.date<=pEndKey)
+      .reduce((s,r)=>s+r.deduct,0);
+    const remaining=Math.max(0,5-takenDays);
+    if(remaining<=0) continue; // 義務達成済み
+    const alreadySent=CACHE.notif.some(n=>
+      n.type==='leave_obligation'&&n.toUid===u.id&&n.date===todayKey
+    );
+    if(!alreadySent){
+      const msg=`【有給取得義務】${u.name}さんは今年度あと${remaining}日の有給取得が必要です（義務期限：${pEndKey}、残り${daysLeft}日）。年10日以上付与者は年5日の取得が法律で義務付けられています。`;
+      const createdAt=new Date().toISOString();
+      await DB.addNotif({id:nid(),toUid:u.id,fromUid:'admin',type:'leave_obligation',date:todayKey,message:msg,read:false,createdAt});
+      await notifyAllAdmins({fromUid:u.id,type:'leave_obligation',date:todayKey,message:msg,read:false,createdAt});
+    }
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  管理者：休暇承認
+// ═══════════════════════════════════════════════
+function renderLeaveApproval(){
+  const filter=document.getElementById('lv-filter').value;
+  let recs=DB.allLeave;
+  if(filter!=='all') recs=recs.filter(r=>r.status===(filter==='pending'?'承認待ち':filter==='approved'?'承認済':'却下'));
+  recs=recs.slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const el=document.getElementById('leave-approval-list');
+  if(!recs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">該当する申請はありません</div>';return;}
+  el.innerHTML=recs.map(r=>{
+    const u=DB.findUser(r.uid);
+    const uname=u?u.name:'不明';
+    const sb=r.status==='承認待ち'?'b-pend':r.status==='承認済'?'b-appr':'b-rej';
+    const btns=r.status==='承認待ち'?`
+      <button class="btn btn-p btn-xs" onclick="approveLeave('${r.id}',true)">承認</button>
+      <button class="btn btn-d btn-xs" onclick="approveLeave('${r.id}',false)">却下</button>`:'';
+    return`<div class="leave-req-row">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:500;flex:1">${uname}</div>
+        <span class="badge ${sb}" style="font-size:10px">${r.status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:4px">${r.date}　${r.type}${r.deduct>0?' ('+r.deduct+'日)':''}</div>
+      ${r.note?`<div style="font-size:11px;color:var(--muted);margin-bottom:6px">備考：${escHtml(r.note)}</div>`:''}
+      <div style="display:flex;gap:6px">${btns}</div>
+    </div>`;
+  }).join('');
+}
+async function approveLeave(id,approve){
+  const r=DB.allLeave.find(r=>r.id===id);
+  if(!r) return;
+  if(!approve){
+    if(r.deduct>0){
+      const u=DB.findUser(r.uid);
+      if(u) await DB.updateUser(r.uid,{leaveDays:Math.round((u.leaveDays+r.deduct)*10)/10});
+    }
+    await DB.updateLeave(id,{status:'却下'});
+  } else {
+    await DB.updateLeave(id,{status:'承認済'});
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  管理者：月次集計 & CSV
+// ═══════════════════════════════════════════════
+// 締め期間（21日締め）に合わせた「当月」を返す
+// 21日以降 → 翌月が当期、20日以前 → 今月が当期
+function currentPeriodDate(){
+  const now=new Date();
+  if(now.getDate()>=21){
+    return new Date(now.getFullYear(), now.getMonth()+1, 1);
+  }
+  return now;
+}
+function buildAggFilters(){
+  const p=currentPeriodDate();
+  const yEl=document.getElementById('agg-year');
+  yEl.innerHTML=[2025,2026,2027].map(y=>`<option ${y===p.getFullYear()?'selected':''}>${y}年</option>`).join('');
+  const mEl=document.getElementById('agg-month');
+  mEl.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===p.getMonth()?'selected':''}>${i+1}月</option>`).join('');
+}
+function getAggPeriod(){
+  const y=parseInt(document.getElementById('agg-year').value);
+  const m=parseInt(document.getElementById('agg-month').value)-1;
+  return{s:dkey(new Date(y,m-1,21)),e:dkey(new Date(y,m,20)),label:`${y}年${m+1}月`};
+}
+function renderAgg(){
+  const {s,e}=getAggPeriod();
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  const tb=document.getElementById('agg-body');
+  tb.innerHTML=users.map(u=>{
+    const atts=DB.attOf(u.id).filter(r=>r.date>=s&&r.date<=e);
+    const workDays=atts.filter(r=>r.type!=='欠勤').length;
+    const ot=atts.reduce((a,r)=>a+r.ot,0);
+    const leaves=DB.leaveOf(u.id).filter(r=>r.date>=s&&r.date<=e&&r.status==='承認済'&&r.type!=='欠勤');
+    const leaveD=leaves.reduce((a,r)=>a+r.deduct,0);
+    const absent=DB.leaveOf(u.id).filter(r=>r.date>=s&&r.date<=e&&r.type==='欠勤').length;
+    const typB=u.type==='employee'?'<span class="badge b-emp" style="font-size:10px">社員</span>':'<span class="badge b-con" style="font-size:10px">外注</span>';
+    return`<tr><td style="font-size:12px">${u.name}</td><td>${typB}</td><td>${workDays}日</td><td>${(workDays*prescribedH(u)).toFixed(1)}h</td><td>${Math.round(ot*10)/10}h</td><td>${leaveD}日</td><td>${absent}日</td></tr>`;
+  }).join('');
+}
+function exportCSV(){
+  const {s,e,label}=getAggPeriod();
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  const rows=[['氏名','区分','出勤日数','所定時間(h)','残業時間(h)','有給取得(日)','欠勤(日)','締め期間']];
+  users.forEach(u=>{
+    const atts=DB.attOf(u.id).filter(r=>r.date>=s&&r.date<=e);
+    const workDays=atts.filter(r=>r.type!=='欠勤').length;
+    const ot=Math.round(atts.reduce((a,r)=>a+r.ot,0)*10)/10;
+    const leaves=DB.leaveOf(u.id).filter(r=>r.date>=s&&r.date<=e&&r.status==='承認済'&&r.type!=='欠勤');
+    const leaveD=leaves.reduce((a,r)=>a+r.deduct,0);
+    const absent=DB.leaveOf(u.id).filter(r=>r.date>=s&&r.date<=e&&r.type==='欠勤').length;
+    rows.push([u.name,u.type==='employee'?'社員':'外注',workDays,(workDays*prescribedH(u)).toFixed(1),ot,leaveD,absent,`${s}〜${e}`]);
+  });
+  const csv='\uFEFF'+rows.map(r=>r.join(',')).join('\n');
+  const a=document.createElement('a');
+  a.href='data:text/csv;charset=utf-8,'+encodeURIComponent(csv);
+  a.download=`勤怠集計_${label}.csv`; a.click();
+}
+
+// ═══════════════════════════════════════════════
+//  管理者：打刻履歴
+// ═══════════════════════════════════════════════
+function initAttHistory(){
+  // ユーザーフィルター
+  const uEl=document.getElementById('hist-user');
+  const users=DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  uEl.innerHTML='<option value="all">全員</option>'+users.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  // 年月フィルター（21日締め基準）
+  const p=currentPeriodDate();
+  const yEl=document.getElementById('hist-year');
+  yEl.innerHTML=[2025,2026,2027].map(y=>`<option ${y===p.getFullYear()?'selected':''}>${y}年</option>`).join('');
+  const mEl=document.getElementById('hist-month');
+  mEl.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===p.getMonth()?'selected':''}>${i+1}月</option>`).join('');
+  renderAttHistory();
+}
+function renderAttHistory(){
+  const uid=document.getElementById('hist-user').value;
+  const y=parseInt(document.getElementById('hist-year').value);
+  const m=parseInt(document.getElementById('hist-month').value)-1;
+  const s=dkey(new Date(y,m-1,21)), e=dkey(new Date(y,m,20));
+  let recs=DB.allAtt.filter(r=>r.date>=s&&r.date<=e&&r.type!=='欠勤');
+  if(uid!=='all') recs=recs.filter(r=>r.uid===uid);
+  recs.sort((a,b)=>b.date.localeCompare(a.date));
+  const tb=document.getElementById('att-hist-body');
+  if(!recs.length){tb.innerHTML='<tr><td colspan="7" style="color:var(--muted);padding:12px 6px;font-size:12px">記録がありません</td></tr>';return;}
+  tb.innerHTML=recs.map(r=>{
+    const u=DB.findUser(r.uid);
+    const nm=u?u.name:'不明';
+    const locB=locLinks(r.inLoc,r.outLoc);
+    const isWorking=r.out==='';
+    const outTxt=isWorking?'<span style="color:var(--at);font-size:11px">出勤中…</span>':r.out;
+    const actualTxt=isWorking?'—':r.actual+'h';
+    const badge=isWorking?'<span class="badge b-in" style="font-size:10px">出勤中</span>':typeBadge(r.type);
+    return`<tr><td style="font-size:11px">${nm}</td><td>${r.date}</td><td>${r.in}</td><td>${outTxt}</td><td>${actualTxt}</td><td>${badge}</td><td>${locB}</td><td><button class="btn btn-xs" onclick="openEditAtt('${r.id}')">編集</button></td></tr>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  日報（社員・外注）
+// ═══════════════════════════════════════════════
+function renderDailyReport(){
+  // 日付の初期値を今日にセット
+  const dateEl = document.getElementById('rpt-date');
+  if(!dateEl.value) dateEl.value = dkey(new Date());
+
+  // 過去の日報一覧
+  const recs = DB.reportsOf(S.user.id).sort((a,b)=>b.date.localeCompare(a.date));
+  const listEl = document.getElementById('rpt-history');
+  if(!recs.length){
+    listEl.innerHTML='<div style="color:var(--muted);font-size:12px;padding:8px 0">まだ日報がありません</div>';
+    return;
+  }
+  listEl.innerHTML = recs.map(r=>{
+    const attRec = CACHE.att.find(a=>a.uid===r.uid && a.date===r.date && a.out!=='');
+    const otBadge = attRec && attRec.ot>0 ? `<span class="b-ot" style="margin-left:4px">残業 ${attRec.ot}h</span>` : '';
+    const mismatch = attRec && Math.abs((r.items||[]).reduce((s,it)=>s+it.hours,0) - attRec.actual) >= 0.1
+      ? `<span class="badge b-late" style="font-size:10px;margin-left:4px">⚠ 時間相違</span>` : '';
+    // 承認ステータス表示
+    const appr = r.approval||'pending';
+    const apprBadge = appr==='approved'
+      ? `<span class="badge b-appr" style="font-size:11px">✅ OK</span>`
+      : appr==='rejected'
+        ? `<span class="badge b-rej" style="font-size:11px">🔄 再提出</span>`
+        : `<span class="badge" style="background:#f0ede8;color:var(--muted);font-size:11px">⬜ 未確認</span>`;
+    const rejNote = appr==='rejected' && r.rejectionNote
+      ? `<div style="font-size:11px;color:var(--danger);margin:4px 0;padding:4px 8px;background:var(--dl);border-radius:6px">💬 ${escHtml(r.rejectionNote)}</div>` : '';
+    // 再提出の場合は編集ボタンを目立たせる
+    const editBtn = appr==='rejected'
+      ? `<button class="btn btn-xs btn-p" onclick="openEditReport('${r.id}')">✏ 再提出</button>`
+      : `<button class="btn btn-xs" onclick="openEditReport('${r.id}')">編集</button>`;
+    const rows=(r.items||[]).map(it=>`
+      <tr>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.no)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.name)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);white-space:pre-wrap">${escHtml(it.content)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.yukisaki||it.dekidaka||'—')}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hours}h</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hashira||0}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hari||0}</td>
+      </tr>`).join('');
+    return`<div style="border-bottom:2px solid var(--border);padding:10px 0;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;flex-wrap:wrap;gap:4px">
+        <div style="display:flex;align-items:center;flex-wrap:wrap;gap:4px">
+          <span style="font-size:12px;font-weight:700;color:var(--accent)">${r.date}</span>${otBadge}${mismatch}${apprBadge}
+        </div>
+        <div style="display:flex;gap:6px">
+          ${editBtn}
+          <button class="btn btn-xs btn-d" onclick="deleteReport('${r.id}')">削除</button>
+        </div>
+      </div>
+      ${rejNote}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">物件番号</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">物件名</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left">作業内容</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">行先</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">時間</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">柱</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">梁</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${r.note?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-top:4px;border-top:1px dashed var(--border)">📝 備考: ${escHtml(r.note)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+function escHtml(s){ return (s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+function escAttr(s){ return (s||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+// ─── 自動翻訳（管理者の日報閲覧用）───
+const TRANS_CACHE = {};
+const LANG_TO_MYMEMORY = {vi:'vi',zh:'zh-CN',pt:'pt',th:'th',id:'id',en:'en',si:'si'};
+function looksJapanese(t){ return !t||/[぀-ヿ一-鿿]/.test(t); }
+async function translateToJa(text, fromLang){
+  if(!text||!text.trim()) return null;
+  const key = (fromLang||'auto')+':'+text;
+  if(key in TRANS_CACHE) return TRANS_CACHE[key];
+  const src = (fromLang && LANG_TO_MYMEMORY[fromLang]) || 'autodetect';
+  try{
+    const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${src}|ja`);
+    const d = await res.json();
+    const t = d?.responseData?.translatedText;
+    TRANS_CACHE[key] = (t && t!==text) ? t : null;
+  }catch(e){ TRANS_CACHE[key]=null; }
+  return TRANS_CACHE[key];
+}
+let _tCnt=0;
+async function autoTranslateAdminReports(){
+  const cells = document.querySelectorAll('#rpt-admin-list .atrans');
+  for(const cell of cells){
+    const lang=cell.dataset.lang, orig=cell.dataset.orig;
+    if(!orig||!orig.trim()) continue;
+    if(lang==='ja') continue;          // 日本語設定は翻訳不要
+    if(looksJapanese(orig)) continue;  // ひらがな・カタカナ・漢字があればスキップ
+    const fromLang = lang||'autodetect';
+    const t = await translateToJa(orig, lang||null);
+    if(!t) continue;
+    const tid='tr'+(++_tCnt);
+    const prefix = cell.dataset.prefix||'';
+    cell.innerHTML=`${escHtml(prefix)}<span>${escHtml(t)}</span>&thinsp;<button class="btn btn-xs" style="font-size:9px;padding:1px 5px;vertical-align:middle" onclick="var e=document.getElementById('${tid}');e.style.display=e.style.display?'':'none'">原文</button><span id="${tid}" style="display:none;font-size:11px;color:var(--muted)"> ${escHtml(orig)}</span>`;
+  }
+}
+
+// 物件セレクトHTML生成（visible===falseは除外。編集時は既存選択を維持）
+function bukkenSelectHtml(cls, selectedId){
+  const opts = CACHE.bukken
+    .filter(b=>b.visible!==false || b.id===selectedId)
+    .map(b=>`<option value="${b.id}" ${b.id===selectedId?'selected':''}>${escHtml(b.no?b.no+' ':'')}${escHtml(b.name)}</option>`).join('');
+  return `<select class="inp inp-sm ${cls}" style="min-width:100px"><option value="">${escHtml(t('rptSelectSite'))}</option>${opts}</select>`;
+}
+// 作業内容セレクトHTML生成（後方互換用・単一select）
+function sagyoSelectHtml(cls, selectedLabel){
+  const hasMatch = selectedLabel && CACHE.sagyo.some(s => s.label === selectedLabel);
+  const extraOpt = (!hasMatch && selectedLabel) ? `<option value="${escHtml(selectedLabel)}" selected>${escHtml(selectedLabel)}</option>` : '';
+  const opts = CACHE.sagyo.map(s=>`<option value="${escHtml(s.label)}" ${s.label===selectedLabel?'selected':''}>${escHtml(s.label)}</option>`).join('');
+  return `<select class="inp inp-sm ${cls}" style="min-width:120px"><option value="">作業を選択</option>${extraOpt}${opts}</select>`;
+}
+// ── ツリーピッカー（カテゴリ展開 → 作業選択）──
+// キャッシュから翻訳済み表示テキストを取得（なければ日本語のまま）
+function sagyoDisp(jaText){
+  if(!jaText||currentLang==='ja') return jaText;
+  return SAGYO_FROM_JA_CACHE[currentLang+'::'+jaText]||jaText;
+}
+function sagyoTreePickerHtml(cls, selectedLabel){
+  const cats=[...new Set(CACHE.sagyo.map(s=>s.category||'未分類'))].sort();
+  const selectedDisplay=selectedLabel?sagyoDisp(selectedLabel):null;
+  const btnText=selectedDisplay||t('rptSelectWork');
+  const blocks=cats.map(cat=>{
+    const items=CACHE.sagyo.filter(s=>(s.category||'未分類')===cat);
+    const expanded=items.some(s=>s.label===selectedLabel);
+    const itemRows=items.map(s=>`
+      <div class="tree-item${s.label===selectedLabel?' selected':''}" data-label="${escHtml(s.label)}" onclick="selectTreeItem(this)">
+        ${escHtml(sagyoDisp(s.label))}
+      </div>`).join('');
+    return `
+      <div class="tree-cat" onclick="toggleTreeCat(this)">
+        <span class="tree-arr">${expanded?'▼':'▶'}</span>${escHtml(sagyoDisp(cat))}
+      </div>
+      <div class="tree-children" style="display:${expanded?'block':'none'}">${itemRows}</div>`;
+  }).join('');
+  return `<div class="tree-picker">
+    <button type="button" class="inp inp-sm tree-picker-btn ${cls}" onclick="toggleTreePicker(this)">${escHtml(btnText)}</button>
+    <input type="hidden" class="rpt-wt" value="${escHtml(selectedLabel||'')}">
+    <div class="tree-panel">${blocks||'<div style="padding:10px;font-size:12px;color:var(--muted)">作業内容を登録してください</div>'}</div>
+  </div>`;
+}
+function toggleTreePicker(btn){
+  const picker=btn.closest('.tree-picker');
+  const wasOpen=picker.classList.contains('open');
+  document.querySelectorAll('.tree-picker.open').forEach(p=>p.classList.remove('open'));
+  if(!wasOpen){
+    picker.classList.add('open');
+    const panel=picker.querySelector('.tree-panel');
+    const r=btn.getBoundingClientRect();
+    const spaceBelow=window.innerHeight - r.bottom;
+    if(spaceBelow < 310 && r.top > 310){
+      panel.style.top=(r.top - panel.offsetHeight - 2)+'px';
+    } else {
+      panel.style.top=(r.bottom + 2)+'px';
+    }
+    panel.style.left=r.left+'px';
+    panel.style.width=r.width+'px';
+  }
+}
+function toggleTreeCat(catEl){
+  const arr=catEl.querySelector('.tree-arr');
+  const children=catEl.nextElementSibling;
+  const open=children.style.display!=='none';
+  children.style.display=open?'none':'block';
+  arr.textContent=open?'▶':'▼';
+}
+function selectTreeItem(el){
+  const label=el.dataset.label; // 常に日本語（保存用）
+  const picker=el.closest('.tree-picker');
+  picker.querySelector('.rpt-wt').value=label; // 日本語のまま保存
+  // ボタン表示は翻訳済みテキストを使用（あれば）
+  const displayLabel = sagyoDisp(label);
+  picker.querySelector('.tree-picker-btn').textContent=displayLabel;
+  picker.querySelectorAll('.tree-item').forEach(i=>i.classList.remove('selected'));
+  el.classList.add('selected');
+  picker.classList.remove('open');
+}
+
+// ── 日本語→他言語翻訳（作業内容・カテゴリ用）──
+const SAGYO_FROM_JA_CACHE = {}; // {lang::text: translated}
+
+// sagyo全ラベル・カテゴリを事前翻訳してキャッシュ（言語変更時に呼ぶ）
+async function preSagyoTranslations(lang){
+  if(lang==='ja'||!LANG_TO_MYMEMORY[lang]) return;
+  const texts=[...new Set([
+    ...CACHE.sagyo.map(s=>s.category||'未分類'),
+    ...CACHE.sagyo.map(s=>s.label)
+  ])].filter(t=>!(currentLang+'::'+t in SAGYO_FROM_JA_CACHE));
+  // 5件ずつ並列翻訳（レートリミット対策）
+  for(let i=0;i<texts.length;i+=5){
+    await Promise.all(texts.slice(i,i+5).map(text=>translateFromJa(text,lang)));
+  }
+}
+async function translateFromJa(text, toLang){
+  if(!text||!text.trim()||toLang==='ja') return null;
+  const target=LANG_TO_MYMEMORY[toLang];
+  if(!target) return null;
+  const key=toLang+'::'+text;
+  if(key in SAGYO_FROM_JA_CACHE) return SAGYO_FROM_JA_CACHE[key];
+  try{
+    const res=await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=ja|${target}`);
+    const d=await res.json();
+    const tr=d?.responseData?.translatedText;
+    SAGYO_FROM_JA_CACHE[key]=(tr&&tr!==text)?tr:null;
+  }catch(e){ SAGYO_FROM_JA_CACHE[key]=null; }
+  return SAGYO_FROM_JA_CACHE[key];
+}
+
+// フォーム内のツリーピッカーのカテゴリ名・作業ラベルを翻訳して表示更新
+async function applyRptFormTranslations(rootEl){
+  if(currentLang==='ja'||!rootEl) return;
+  // カテゴリ名を翻訳
+  for(const catEl of rootEl.querySelectorAll('.tree-cat')){
+    const arr=catEl.querySelector('.tree-arr');
+    const orig=catEl.textContent.replace(arr?arr.textContent:'','').trim();
+    if(!orig) continue;
+    const tr=await translateFromJa(orig, currentLang);
+    if(tr){
+      const arrowText=arr?arr.outerHTML:'';
+      catEl.innerHTML=arrowText+escHtml(tr);
+    }
+  }
+  // 作業項目ラベルを翻訳
+  for(const item of rootEl.querySelectorAll('.tree-item')){
+    const orig=item.dataset.label;
+    if(!orig) continue;
+    const tr=await translateFromJa(orig, currentLang);
+    if(tr) item.textContent=tr;
+  }
+  // 既に選択済みのボタンラベルも更新
+  for(const btn of rootEl.querySelectorAll('.tree-picker-btn')){
+    const hiddenInput=btn.closest('.tree-picker')?.querySelector('.rpt-wt');
+    const jaLabel=hiddenInput?.value;
+    if(!jaLabel) continue;
+    const tr=await translateFromJa(jaLabel, currentLang);
+    if(tr) btn.textContent=tr;
+  }
+}
+// ピッカー外クリックで閉じる
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.tree-picker'))
+    document.querySelectorAll('.tree-picker.open').forEach(p=>p.classList.remove('open'));
+});
+// 行先セレクトHTML生成
+const YUKISAKI=['富士宮工場','SD工房','FUJIYAMAヤード','新富士工場','その他'];
+function yukisakiSelectHtml(cls, selected){
+  const labels = t('yukisakiLabels'); // 表示ラベル（選択言語）
+  const hasMatch = selected && YUKISAKI.includes(selected);
+  const extraOpt = (!hasMatch && selected) ? `<option value="${escHtml(selected)}" selected>${escHtml(selected)}</option>` : '';
+  // value=日本語(保存用)、表示テキスト=翻訳済みラベル
+  const opts = YUKISAKI.map((v, i) => {
+    const label = (Array.isArray(labels) && labels[i]) ? labels[i] : v;
+    return `<option value="${escHtml(v)}" ${v===selected?'selected':''}>${escHtml(label)}</option>`;
+  }).join('');
+  return `<select class="inp inp-sm ${cls}" style="min-width:90px"><option value="">${escHtml(t('rptSelectDest'))}</option>${extraOpt}${opts}</select>`;
+}
+
+// 行を追加
+function addRptRow(){
+  const wrap = document.getElementById('rpt-rows');
+  const card = document.createElement('div');
+  card.className='rpt-row-card';
+  card.innerHTML=`
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptSite'))} <span style="color:var(--danger)">*</span></div>${bukkenSelectHtml('rpt-bk','')}
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptDest'))} <span style="color:var(--danger)">*</span></div>${yukisakiSelectHtml('rpt-yukisaki','')}
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptWork'))} <span style="color:var(--danger)">*</span></div>
+      ${sagyoTreePickerHtml('','')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end">
+      <div><div class="rpt-field-label">${escHtml(t('rptHours'))} <span style="color:var(--danger)">*</span></div><input class="inp inp-sm rpt-hours" type="number" min="0" max="24" step="0.5" placeholder="0"></div>
+      <div><div class="rpt-field-label">${escHtml(t('rptHashira'))}</div><input class="inp inp-sm rpt-hashira" type="number" min="0" placeholder="0"></div>
+      <div><div class="rpt-field-label">${escHtml(t('rptHari'))}</div><input class="inp inp-sm rpt-hari" type="number" min="0" placeholder="0"></div>
+      <div style="padding-bottom:2px"><button class="btn btn-sm btn-d" onclick="this.closest('.rpt-row-card').remove()" style="padding:11px 14px">✕</button></div>
+    </div>`;
+  wrap.appendChild(card);
+  applyRptFormTranslations(card); // 作業内容ツリーを翻訳表示
+}
+
+async function submitDailyReport(){
+  const date  = document.getElementById('rpt-date').value;
+  const errEl = document.getElementById('rpt-err');
+  if(!date){ errEl.textContent=t('rptErrDate'); return; }
+
+  const rows = [...document.querySelectorAll('#rpt-rows .rpt-row-card')];
+  const items = rows.map(tr=>{
+    const bkId    = tr.querySelector('.rpt-bk')?.value||'';
+    const bk      = CACHE.bukken.find(b=>b.id===bkId)||{no:'',name:bkId};
+    const content = tr.querySelector('.rpt-wt')?.value||'';
+    const yukisaki= tr.querySelector('.rpt-yukisaki')?.value||'';
+    const hours   = parseFloat(tr.querySelector('.rpt-hours')?.value)||0;
+    const hashira = parseFloat(tr.querySelector('.rpt-hashira')?.value)||0;
+    const hari    = parseFloat(tr.querySelector('.rpt-hari')?.value)||0;
+    return { no:bk.no||'', name:bk.name||'', bkId, content, yukisaki, hours, hashira, hari };
+  }).filter(it=>it.content);
+
+  if(!items.length){ errEl.textContent=t('rptErrNoItems'); return; }
+  // 全行の必須チェック
+  for(const it of items){
+    if(!it.bkId){ errEl.textContent=t('rptErrNoBkId'); return; }
+    if(!it.yukisaki){ errEl.textContent=t('rptErrNoYuki'); return; }
+    if(!it.hours){ errEl.textContent=t('rptErrNoHours'); return; }
+  }
+  errEl.textContent='';
+  const note = document.getElementById('rpt-note').value.trim();
+
+  const existing = DB.reportsOf(S.user.id).find(r=>r.date===date);
+  if(existing){
+    await DB.updateReport(existing.id, { items, note, lang:currentLang, updatedAt: new Date().toISOString() });
+  } else {
+    await DB.addReport({ id:aid(), uid:S.user.id, date, items, note, lang:currentLang, createdAt: new Date().toISOString() });
+  }
+
+  // 日報合計時間 vs 打刻実働時間の相違チェック
+  const reportTotal = Math.round(items.reduce((s,it)=>s+it.hours,0)*10)/10;
+  const attRec = CACHE.att.find(r=>r.uid===S.user.id && r.date===date && r.out!=='');
+  if(attRec && Math.abs(reportTotal - attRec.actual) >= 0.1){
+    const msg = `【時間相違】${S.user.name}（${date}）日報合計：${reportTotal}h ／ 打刻実働：${attRec.actual}h`;
+    const createdAt = new Date().toISOString();
+    await DB.addNotif({id:nid(),toUid:S.user.id,fromUid:S.user.id,type:'report_mismatch',date,message:msg,read:false,createdAt});
+    await notifyAllAdmins({fromUid:S.user.id,type:'report_mismatch',date,message:msg,read:false,createdAt});
+  }
+
+  document.getElementById('rpt-rows').innerHTML='';
+  document.getElementById('rpt-note').value='';
+  addRptRow();
+  renderDailyReport();
+}
+
+let editingReportId = null;
+function openEditReport(id){
+  const r = CACHE.reports.find(rr=>rr.id===id);
+  if(!r) return;
+  editingReportId = id;
+  const rptUser = DB.findUser(r.uid);
+  const isAdminEdit = S.user && S.user.type === 'admin' && S.user.id !== r.uid;
+  document.getElementById('rpt-edit-date').textContent =
+    r.date + (isAdminEdit && rptUser ? '　（' + rptUser.name + '）' : '');
+  // 編集モーダルの行を構築
+  const editWrap = document.getElementById('rpt-edit-rows');
+  editWrap.innerHTML='';
+  (r.items||[]).forEach(it=>{
+    const card=document.createElement('div');
+    card.className='rpt-row-card';
+    const matchB = CACHE.bukken.find(b=>b.name===it.name&&b.no===it.no)||CACHE.bukken.find(b=>b.name===it.name)||null;
+    card.innerHTML=`
+      <div style="margin-bottom:10px">
+        <div class="rpt-field-label">${escHtml(t('rptSite'))}</div>${bukkenSelectHtml('rpt-bk', matchB?.id||'')}
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="rpt-field-label">${escHtml(t('rptDest'))}</div>${yukisakiSelectHtml('rpt-yukisaki', it.yukisaki||'')}
+      </div>
+      <div style="margin-bottom:10px">
+        <div class="rpt-field-label">${escHtml(t('rptWork'))}</div>
+        ${sagyoTreePickerHtml('', it.content||'')}
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end">
+        <div><div class="rpt-field-label">${escHtml(t('rptHours'))}</div><input class="inp inp-sm rpt-hours" type="number" min="0" max="24" step="0.5" value="${it.hours}"></div>
+        <div><div class="rpt-field-label">${escHtml(t('rptHashira'))}</div><input class="inp inp-sm rpt-hashira" type="number" min="0" value="${it.hashira||0}"></div>
+        <div><div class="rpt-field-label">${escHtml(t('rptHari'))}</div><input class="inp inp-sm rpt-hari" type="number" min="0" value="${it.hari||0}"></div>
+        <div style="padding-bottom:2px"><button class="btn btn-sm btn-d" onclick="this.closest('.rpt-row-card').remove()" style="padding:11px 14px">✕</button></div>
+      </div>`;
+    // innerHTML設定後にセレクト値をJSで明示セット（ブラウザの解釈差異を吸収）
+    if(it.yukisaki){ const sel=card.querySelector('.rpt-yukisaki'); if(sel) sel.value=it.yukisaki; }
+    if(matchB?.id){ const sel=card.querySelector('.rpt-bk'); if(sel) sel.value=matchB.id; }
+    editWrap.appendChild(card);
+  });
+  if(!editWrap.children.length) addRptEditRow();
+  document.getElementById('rpt-edit-note').value = r.note || '';
+  document.getElementById('rpt-edit-err').textContent='';
+  document.getElementById('rpt-edit-modal').classList.add('open');
+  applyRptFormTranslations(document.getElementById('rpt-edit-rows')); // ツリー翻訳
+}
+function addRptEditRow(){
+  const wrap=document.getElementById('rpt-edit-rows');
+  const card=document.createElement('div');
+  card.className='rpt-row-card';
+  card.innerHTML=`
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptSite'))}</div>${bukkenSelectHtml('rpt-bk','')}
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptDest'))}</div>${yukisakiSelectHtml('rpt-yukisaki','')}
+    </div>
+    <div style="margin-bottom:10px">
+      <div class="rpt-field-label">${escHtml(t('rptWork'))}</div>
+      ${sagyoTreePickerHtml('','')}
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr auto;gap:8px;align-items:flex-end">
+      <div><div class="rpt-field-label">${escHtml(t('rptHours'))}</div><input class="inp inp-sm rpt-hours" type="number" min="0" max="24" step="0.5" placeholder="0"></div>
+      <div><div class="rpt-field-label">${escHtml(t('rptHashira'))}</div><input class="inp inp-sm rpt-hashira" type="number" min="0" placeholder="0"></div>
+      <div><div class="rpt-field-label">${escHtml(t('rptHari'))}</div><input class="inp inp-sm rpt-hari" type="number" min="0" placeholder="0"></div>
+      <div style="padding-bottom:2px"><button class="btn btn-sm btn-d" onclick="this.closest('.rpt-row-card').remove()" style="padding:11px 14px">✕</button></div>
+    </div>`;
+  wrap.appendChild(card);
+  applyRptFormTranslations(card); // 作業内容ツリーを翻訳表示
+}
+async function saveEditReport(){
+  const errEl=document.getElementById('rpt-edit-err');
+  const rows=[...document.querySelectorAll('#rpt-edit-rows .rpt-row-card')];
+  const items=rows.map(tr=>{
+    const bkId   =tr.querySelector('.rpt-bk')?.value||'';
+    const bk     =CACHE.bukken.find(b=>b.id===bkId)||{no:'',name:bkId};
+    const content=tr.querySelector('.rpt-wt')?.value||'';
+    const yukisaki=tr.querySelector('.rpt-yukisaki')?.value||'';
+    const hours  =parseFloat(tr.querySelector('.rpt-hours')?.value)||0;
+    const hashira=parseFloat(tr.querySelector('.rpt-hashira')?.value)||0;
+    const hari   =parseFloat(tr.querySelector('.rpt-hari')?.value)||0;
+    return{no:bk.no||'',name:bk.name||'',bkId,content,yukisaki,hours,hashira,hari};
+  }).filter(it=>it.content);
+  if(!items.length){errEl.textContent=t('rptErrNoItems');return;}
+  for(const it of items){
+    if(!it.bkId){errEl.textContent=t('rptErrNoBkId');return;}
+    if(!it.yukisaki){errEl.textContent=t('rptErrNoYuki');return;}
+    if(!it.hours){errEl.textContent=t('rptErrNoHours');return;}
+  }
+  const note = document.getElementById('rpt-edit-note').value.trim();
+  await DB.updateReport(editingReportId,{items,note,lang:currentLang,updatedAt:new Date().toISOString()});
+  closeModal('rpt-edit-modal');
+  if(S._editFromAdmin){
+    S._editFromAdmin = false;
+    renderReportAdmin();
+  } else {
+    renderDailyReport();
+  }
+}
+async function deleteReport(id){
+  if(!confirm('この日報を削除しますか？')) return;
+  await DB.deleteReport(id);
+  renderDailyReport();
+}
+
+// ═══════════════════════════════════════════════
+//  日報承認
+// ═══════════════════════════════════════════════
+let _apprTab = 'all'; // 承認フィルタータブの現在値
+
+function switchApprTab(el){
+  document.querySelectorAll('.appr-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  _apprTab = el.dataset.appr;
+  renderReportAdmin();
+}
+
+async function approveReport(id){
+  const r = CACHE.reports.find(r=>r.id===id);
+  if(!r) return;
+  const now = new Date().toISOString();
+  await DB.updateReport(id, {approval:'approved', approvedAt:now, approvedBy:S.user.id, rejectionNote:''});
+  // 従業員に通知
+  if(r.uid !== S.user.id){
+    await DB.addNotif({id:nid(), toUid:r.uid, fromUid:S.user.id,
+      type:'report_approved',
+      message:`✅ ${r.date} の日報が承認されました`,
+      date:dkey(new Date()), read:false, createdAt:now});
+  }
+  renderReportAdmin();
+  if(S.user?.type==='admin') renderDailyReport();
+}
+
+async function rejectReport(id){
+  const r = CACHE.reports.find(r=>r.id===id);
+  if(!r) return;
+  // 再提出理由の入力（モーダルの代わりにprompt、スキップ可）
+  const reason = window.prompt(`${r.date} の日報を再提出にします。\n理由・コメント（任意）:`);
+  if(reason === null) return; // キャンセル
+  const now = new Date().toISOString();
+  await DB.updateReport(id, {approval:'rejected', approvedAt:now, approvedBy:S.user.id, rejectionNote:reason.trim()});
+  // 従業員に通知
+  if(r.uid !== S.user.id){
+    const msg = reason.trim()
+      ? `🔄 ${r.date} の日報を再提出してください（コメント: ${reason.trim()}）`
+      : `🔄 ${r.date} の日報を再提出してください`;
+    await DB.addNotif({id:nid(), toUid:r.uid, fromUid:S.user.id,
+      type:'report_rejected',
+      message:msg,
+      date:dkey(new Date()), read:false, createdAt:now});
+  }
+  renderReportAdmin();
+  if(S.user?.type==='admin') renderDailyReport();
+}
+
+// ═══════════════════════════════════════════════
+//  日報閲覧（管理者）
+// ═══════════════════════════════════════════════
+function buildReportAdminFilters(){
+  const now = new Date();
+  const uEl = document.getElementById('rpt-admin-user');
+  // ユーザー選択: 選択中の値を保持しつつ再構築（先頭に「全員」を追加）
+  const curUid = uEl.value;
+  const nonAdmin = DB.users.filter(u=>u.type!=='admin')
+    .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999));
+  uEl.innerHTML = '<option value="">全員</option>' + nonAdmin.map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(curUid && uEl.querySelector(`option[value="${curUid}"]`)) uEl.value = curUid;
+  // 年月: 未初期化の時だけセット（選択変更後は保持）
+  const yEl = document.getElementById('rpt-admin-year');
+  const p=currentPeriodDate();
+  if(!yEl.options.length)
+    yEl.innerHTML=[2025,2026,2027].map(y=>`<option ${y===p.getFullYear()?'selected':''}>${y}年</option>`).join('');
+  const mEl = document.getElementById('rpt-admin-month');
+  if(!mEl.options.length)
+    mEl.innerHTML=Array.from({length:12},(_,i)=>`<option value="${i+1}" ${i===p.getMonth()?'selected':''}>${i+1}月</option>`).join('');
+}
+function renderReportAdmin(){
+  buildReportAdminFilters();
+  const uid      = document.getElementById('rpt-admin-user').value;
+  const y        = parseInt(document.getElementById('rpt-admin-year').value);
+  const m        = parseInt(document.getElementById('rpt-admin-month').value)-1;
+  const yukiFilt = document.getElementById('rpt-admin-yukisaki').value;
+  const showAll  = !uid;
+  // 締め期間に合わせる（前月21日〜当月20日）
+  const from = dkey(new Date(y,m-1,21));
+  const to   = dkey(new Date(y,m,20));
+  let recs = CACHE.reports.filter(r=>{
+    if(!showAll && r.uid!==uid) return false;
+    return r.date>=from && r.date<=to;
+  }).sort((a,b)=>b.date.localeCompare(a.date)||(DB.findUser(a.uid)?.name||'').localeCompare(DB.findUser(b.uid)?.name||''));
+  // 行先フィルター
+  if(yukiFilt) recs=recs.filter(r=>(r.items||[]).some(it=>it.yukisaki===yukiFilt));
+  // 承認フィルター
+  if(_apprTab==='pending')  recs=recs.filter(r=>!r.approval||r.approval==='pending');
+  if(_apprTab==='approved') recs=recs.filter(r=>r.approval==='approved');
+  if(_apprTab==='rejected') recs=recs.filter(r=>r.approval==='rejected');
+
+  const listEl = document.getElementById('rpt-admin-list');
+  if(!recs.length){
+    listEl.innerHTML='<div class="card" style="color:var(--muted);font-size:12px">日報がありません</div>';
+    return;
+  }
+  listEl.innerHTML = recs.map(r=>{
+    const u    = DB.findUser(r.uid);
+    const attRec = CACHE.att.find(a=>a.uid===r.uid && a.date===r.date && a.out!=='');
+    const otBadge = attRec && attRec.ot>0 ? `<span class="b-ot" style="margin-left:4px">残業 ${attRec.ot}h</span>` : '';
+    const mismatch = attRec && Math.abs((r.items||[]).reduce((s,it)=>s+it.hours,0) - attRec.actual) >= 0.1
+      ? `<span class="badge b-late" style="font-size:10px;margin-left:4px">⚠ 時間相違</span>` : '';
+    let items = r.items||[];
+    if(yukiFilt) items=items.filter(it=>it.yukisaki===yukiFilt);
+    const rLang = r.lang||'';
+    // 承認バッジ
+    const appr = r.approval||'pending';
+    const apprBadge = appr==='approved'
+      ? `<span class="badge b-appr" style="font-size:11px">✅ OK</span>`
+      : appr==='rejected'
+        ? `<span class="badge b-rej" style="font-size:11px">🔄 再提出</span>`
+        : `<span class="badge" style="background:#f0ede8;color:var(--muted);font-size:11px">⬜ 未確認</span>`;
+    const rejNote = appr==='rejected' && r.rejectionNote
+      ? `<div style="font-size:11px;color:var(--danger);margin-top:4px;padding:4px 8px;background:var(--dl);border-radius:6px">💬 ${escHtml(r.rejectionNote)}</div>` : '';
+    const rows=items.map(it=>`
+      <tr>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.no)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.name)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);white-space:pre-wrap" class="atrans" data-lang="${escAttr(rLang)}" data-orig="${escAttr(it.content)}">${escHtml(it.content)}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border)">${escHtml(it.yukisaki||'—')}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hours}h</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hashira||0}</td>
+        <td style="padding:5px 4px;font-size:12px;border-bottom:1px solid var(--border);text-align:right">${it.hari||0}</td>
+      </tr>`).join('');
+    return`<div class="card" style="margin-bottom:8px${appr==='approved'?';border-left:3px solid var(--at)':appr==='rejected'?';border-left:3px solid var(--danger)':';border-left:3px solid var(--border)'}">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px;flex-wrap:wrap">
+        <span style="font-size:13px;font-weight:700;color:var(--accent)">${r.date}</span>
+        ${showAll?`<span style="font-size:12px;font-weight:600;color:var(--info);background:var(--il);padding:2px 8px;border-radius:12px">${u?u.name:''}</span>`:''}
+        <span style="font-size:11px;color:var(--muted)">${!showAll&&u?u.name:''}</span>${otBadge}${mismatch}
+        ${apprBadge}
+      </div>
+      ${rejNote}
+      <div style="overflow-x:auto">
+        <table style="width:100%;border-collapse:collapse">
+          <thead><tr style="background:var(--bg)">
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">物件番号</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">物件名</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left">作業内容</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:left;white-space:nowrap">行先</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">時間</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">柱</th>
+            <th style="padding:4px;font-size:11px;color:var(--muted);text-align:right;white-space:nowrap">梁</th>
+          </tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+      ${r.note?`<div style="font-size:12px;color:var(--muted);margin-top:6px;padding-top:4px;border-top:1px dashed var(--border)" class="atrans" data-lang="${escAttr(rLang)}" data-orig="${escAttr(r.note)}" data-prefix="📝 備考: ">📝 備考: ${escHtml(r.note)}</div>`:''}
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:6px;flex-wrap:wrap">
+        <div style="display:flex;gap:6px">
+          <button class="btn-stamp-ok${appr==='approved'?' stamped':''}" onclick="approveReport('${r.id}')">✅ OK</button>
+          <button class="btn-stamp-rej${appr==='rejected'?' stamped':''}" onclick="rejectReport('${r.id}')">🔄 再提出</button>
+        </div>
+        <div style="display:flex;gap:6px">
+          <button class="btn btn-xs" onclick="openEditReportAdmin('${r.id}')">✏ 編集</button>
+          <button class="btn btn-xs btn-d" onclick="deleteReportAdmin('${r.id}')">削除</button>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  autoTranslateAdminReports();
+}
+async function openEditReportAdmin(id){
+  // 管理者が日報閲覧から編集するときは、編集後にrenderReportAdminを呼ぶフラグを立てる
+  S._editFromAdmin = true;
+  openEditReport(id);
+}
+async function deleteReportAdmin(id){
+  if(!confirm('この日報を削除しますか？')) return;
+  await DB.deleteReport(id);
+  renderReportAdmin();
+}
+
+// ═══════════════════════════════════════════════
+//  物件マスター管理（管理者）
+// ═══════════════════════════════════════════════
+let editingBukkenId = null;
+function renderBukkenMaster(){
+  const el = document.getElementById('bukken-list');
+  if(!CACHE.bukken.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:12px">物件が登録されていません</div>';
+    return;
+  }
+  el.innerHTML = CACHE.bukken.map(b=>{
+    const vis = b.visible!==false;
+    return`<div style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);opacity:${vis?'1':'0.45'}">
+      <span style="font-size:11px;color:var(--muted);min-width:40px">${escHtml(b.no||'')}</span>
+      <span style="font-size:13px;flex:1;${vis?'':'text-decoration:line-through;color:var(--muted)'}">${escHtml(b.name)}</span>
+      <button class="btn btn-xs" style="min-width:52px;background:${vis?'var(--al)':'#f0ede8'};color:${vis?'var(--at)':'var(--muted)'};border-color:${vis?'var(--at)':'var(--border)'}" onclick="toggleBukkenVisible('${b.id}')">${vis?'表示中':'非表示'}</button>
+      <button class="btn btn-xs" onclick="openEditBukken('${b.id}')">編集</button>
+      <button class="btn btn-xs btn-d" onclick="deleteBukken('${b.id}')">削除</button>
+    </div>`;
+  }).join('');
+}
+
+function renderSagyoMaster(){
+  const el = document.getElementById('sagyo-list');
+  if(!CACHE.sagyo.length){
+    el.innerHTML='<div style="color:var(--muted);font-size:12px">作業内容が登録されていません</div>';
+    return;
+  }
+  // カテゴリ別にグループ化
+  const cats=[...new Set(CACHE.sagyo.map(s=>s.category||'未分類'))].sort();
+  el.innerHTML = cats.map(cat=>{
+    const items=CACHE.sagyo.filter(s=>(s.category||'未分類')===cat);
+    const rows=items.map(s=>`
+      <div style="display:flex;align-items:center;gap:8px;padding:5px 0 5px 12px;border-bottom:1px solid var(--border)">
+        <span style="font-size:11px;color:var(--muted);min-width:36px">${escHtml(s.code||'')}</span>
+        <span style="font-size:12px;flex:1">${escHtml(s.label)}</span>
+        <button class="btn btn-xs" onclick="openEditSagyo('${s.id}')">編集</button>
+        <button class="btn btn-xs btn-d" onclick="deleteSagyoItem('${s.id}')">削除</button>
+      </div>`).join('');
+    return`<div style="margin-bottom:4px">
+      <div style="font-size:11px;font-weight:700;color:var(--info);padding:6px 0 2px;border-bottom:2px solid var(--il)">▸ ${escHtml(cat)}</div>
+      ${rows}
+    </div>`;
+  }).join('');
+  // カテゴリのdatalistを更新（入力補完用）
+  const dl=document.getElementById('sg-cat-list');
+  if(dl) dl.innerHTML=cats.map(c=>`<option value="${escHtml(c)}">`).join('');
+}
+function openAddBukken(){
+  editingBukkenId = null;
+  document.getElementById('bukken-modal-title').textContent='物件追加';
+  document.getElementById('bk-no').value='';
+  document.getElementById('bk-name').value='';
+  document.getElementById('bk-err').textContent='';
+  document.getElementById('bukken-modal').classList.add('open');
+}
+function openEditBukken(id){
+  const b = CACHE.bukken.find(b=>b.id===id);
+  if(!b) return;
+  editingBukkenId = id;
+  document.getElementById('bukken-modal-title').textContent='物件編集';
+  document.getElementById('bk-no').value = b.no||'';
+  document.getElementById('bk-name').value = b.name||'';
+  document.getElementById('bk-err').textContent='';
+  document.getElementById('bukken-modal').classList.add('open');
+}
+async function toggleBukkenVisible(id){
+  const b=CACHE.bukken.find(b=>b.id===id);
+  if(!b) return;
+  await DB.updateBukken(id,{visible: b.visible===false ? true : false});
+  renderBukkenMaster();
+}
+async function saveBukken(){
+  const no   = document.getElementById('bk-no').value.trim();
+  const name = document.getElementById('bk-name').value.trim();
+  const errEl = document.getElementById('bk-err');
+  if(!name){ errEl.textContent='物件名を入力してください'; return; }
+  if(editingBukkenId){
+    await DB.updateBukken(editingBukkenId,{no,name});
+  } else {
+    await DB.addBukken({id:'bk_'+Date.now(),no,name,visible:true});
+  }
+  closeModal('bukken-modal');
+  renderBukkenMaster();
+}
+
+// 作業内容マスター
+let editingSagyoId = null;
+function openAddSagyo(){
+  editingSagyoId=null;
+  document.getElementById('sagyo-modal-title').textContent='作業内容追加';
+  document.getElementById('sg-cat').value='';
+  document.getElementById('sg-code').value='';
+  document.getElementById('sg-label').value='';
+  document.getElementById('sg-err').textContent='';
+  document.getElementById('sagyo-modal').classList.add('open');
+}
+function openEditSagyo(id){
+  const s=CACHE.sagyo.find(s=>s.id===id);
+  if(!s) return;
+  editingSagyoId=id;
+  document.getElementById('sagyo-modal-title').textContent='作業内容編集';
+  document.getElementById('sg-cat').value=s.category||'';
+  document.getElementById('sg-code').value=s.code||'';
+  document.getElementById('sg-label').value=s.label||'';
+  document.getElementById('sg-err').textContent='';
+  document.getElementById('sagyo-modal').classList.add('open');
+}
+async function saveSagyo(){
+  const category=document.getElementById('sg-cat').value.trim()||'未分類';
+  const code=document.getElementById('sg-code').value.trim();
+  const label=document.getElementById('sg-label').value.trim();
+  const errEl=document.getElementById('sg-err');
+  if(!label){errEl.textContent='表示名を入力してください';return;}
+  if(editingSagyoId){
+    await DB.updateSagyo(editingSagyoId,{category,code,label});
+  } else {
+    await DB.addSagyo({id:'sg_'+Date.now(),category,code,label});
+  }
+  closeModal('sagyo-modal');
+  renderSagyoMaster();
+}
+async function deleteSagyoItem(id){
+  if(!confirm('この作業内容を削除しますか？')) return;
+  await DB.deleteSagyo(id);
+  renderSagyoMaster();
+}
+async function deleteBukken(id){
+  if(!confirm('この物件を削除しますか？')) return;
+  await DB.deleteBukken(id);
+  renderBukkenMaster();
+}
+
+// ═══════════════════════════════════════════════
+//  打刻編集（管理者）
+// ═══════════════════════════════════════════════
+let editingAttId = null;
+function openEditAtt(id){
+  const r = CACHE.att.find(a=>a.id===id);
+  if(!r) return;
+  editingAttId = id;
+  const u = DB.findUser(r.uid);
+  document.getElementById('att-edit-name').textContent = u ? u.name : '不明';
+  document.getElementById('att-edit-date').value = r.date;
+  document.getElementById('att-edit-in').value = r.in || '';
+  document.getElementById('att-edit-out').value = (r.out && r.out!=='') ? r.out : '';
+  document.getElementById('att-edit-type').value = r.type?.replace('中','').replace('出勤中','出勤').replace('遅刻出勤中','遅刻').replace('休日出勤中','休日出勤') || '出勤';
+  document.getElementById('att-edit-err').textContent = '';
+  document.getElementById('att-edit-modal').classList.add('open');
+}
+async function saveEditAtt(){
+  const errEl = document.getElementById('att-edit-err');
+  const date = document.getElementById('att-edit-date').value;
+  const inT  = document.getElementById('att-edit-in').value;
+  const outT = document.getElementById('att-edit-out').value;
+  const type = document.getElementById('att-edit-type').value;
+  if(!date || !inT){ errEl.textContent='日付と出勤時刻は必須です'; return; }
+  const patch = { date, in: inT, type };
+  if(outT){
+    // 実働時間を再計算
+    const [ih,im] = inT.split(':').map(Number);
+    const [oh,om] = outT.split(':').map(Number);
+    const r = CACHE.att.find(a=>a.id===editingAttId);
+    const uObj = r ? (DB.findUser(r.uid)||null) : null;
+    const mins = (oh*60+om) - (ih*60+im) - breakMin(uObj||'employee');
+    const actual = roundH(Math.max(0, mins/60));
+    const ot = calcOT(actual, uObj||'employee');
+    patch.out = outT;
+    patch.actual = actual;
+    patch.ot = ot;
+  } else {
+    patch.out = '';
+    patch.actual = 0;
+    patch.ot = 0;
+  }
+  try{
+    await DB.updateAtt(editingAttId, patch);
+    closeModal('att-edit-modal');
+  } catch(e){
+    errEl.textContent = '保存に失敗しました: ' + e.message;
+  }
+}
+
+// ═══════════════════════════════════════════════
+//  打刻修正届（社員）
+// ═══════════════════════════════════════════════
+function corrId(){return 'cor_'+Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+
+async function submitCorrection(){
+  const date    = document.getElementById('cor-date').value;
+  const reqIn   = document.getElementById('cor-in').value;
+  const reqOut  = document.getElementById('cor-out').value;
+  const reason  = document.getElementById('cor-reason').value.trim();
+  const errEl   = document.getElementById('cor-err');
+  errEl.textContent='';
+  if(!date){errEl.textContent='対象日を選択してください';return;}
+  if(!reqIn){errEl.textContent='修正後の出勤時刻を入力してください';return;}
+  if(!reqOut){errEl.textContent='修正後の退勤時刻を入力してください';return;}
+  if(!reason){errEl.textContent='修正理由を入力してください';return;}
+  // 現在の打刻情報を参照用に取得
+  const attRec = CACHE.att.find(a=>a.uid===S.user.id && a.date===date);
+  const currentIn  = attRec?.in||'';
+  const currentOut = attRec?.out||'';
+  await DB.addCorrection({
+    id:corrId(), uid:S.user.id, date,
+    currentIn, currentOut, reqIn, reqOut, reason,
+    status:'承認待ち', appliedAt:dkey(new Date()), attId:attRec?.id||null
+  });
+  document.getElementById('cor-date').value='';
+  document.getElementById('cor-in').value='';
+  document.getElementById('cor-out').value='';
+  document.getElementById('cor-reason').value='';
+  renderCorrectionList();
+}
+
+function renderCorrectionList(){
+  if(!S.user) return;
+  const el=document.getElementById('correction-list');
+  if(!el) return;
+  const recs=CACHE.corrections.filter(c=>c.uid===S.user.id)
+    .sort((a,b)=>b.appliedAt.localeCompare(a.appliedAt));
+  if(!recs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted)">申請はありません</div>';return;}
+  el.innerHTML=recs.map(c=>{
+    const sb=c.status==='承認待ち'?'b-pend':c.status==='承認済'?'b-appr':'b-rej';
+    return`<div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid #f0ede8">
+      <div style="flex:1">
+        <div style="font-size:12px;font-weight:600">${c.date}　<span class="badge ${sb}" style="font-size:10px">${c.status}</span></div>
+        <div style="font-size:11px;color:var(--muted);margin-top:2px">修正前：${c.currentIn||'—'}〜${c.currentOut||'—'}　→　修正後：${c.reqIn}〜${c.reqOut}</div>
+        <div style="font-size:11px;color:var(--muted)">理由：${escHtml(c.reason)}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ═══════════════════════════════════════════════
+//  打刻修正承認（管理者）
+// ═══════════════════════════════════════════════
+function renderCorrectionAdmin(){
+  const filter = document.getElementById('cor-filter')?.value||'all';
+  let recs = CACHE.corrections.slice();
+  if(filter!=='all') recs=recs.filter(c=>c.status===(filter==='pending'?'承認待ち':filter==='approved'?'承認済':'却下'));
+  recs.sort((a,b)=>b.appliedAt.localeCompare(a.appliedAt));
+  const el=document.getElementById('correction-admin-list');
+  if(!recs.length){el.innerHTML='<div style="font-size:13px;color:var(--muted);padding:8px 0">該当する申請はありません</div>';return;}
+  el.innerHTML=recs.map(c=>{
+    const u=DB.findUser(c.uid);
+    const sb=c.status==='承認待ち'?'b-pend':c.status==='承認済'?'b-appr':'b-rej';
+    const btns=c.status==='承認待ち'?`
+      <button class="btn btn-p btn-xs" onclick="approveCorrection('${c.id}',true)">承認</button>
+      <button class="btn btn-d btn-xs" onclick="approveCorrection('${c.id}',false)">却下</button>`:'';
+    return`<div class="leave-req-row">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+        <div style="font-size:13px;font-weight:500;flex:1">${u?u.name:'不明'}</div>
+        <span class="badge ${sb}" style="font-size:10px">${c.status}</span>
+      </div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">対象日：${c.date}</div>
+      <div style="font-size:12px;color:var(--muted);margin-bottom:2px">修正前：${c.currentIn||'—'}〜${c.currentOut||'—'}</div>
+      <div style="font-size:12px;color:var(--accent);font-weight:600;margin-bottom:4px">修正後：${c.reqIn}〜${c.reqOut}</div>
+      <div style="font-size:11px;color:var(--muted);margin-bottom:6px">理由：${escHtml(c.reason)}</div>
+      <div style="display:flex;gap:6px">${btns}</div>
+    </div>`;
+  }).join('');
+}
+
+async function approveCorrection(id, approve){
+  const c=CACHE.corrections.find(c=>c.id===id);
+  if(!c) return;
+  const status=approve?'承認済':'却下';
+  await DB.updateCorrection(id,{status, reviewedAt:dkey(new Date())});
+  if(approve){
+    // 打刻レコードを自動更新
+    const attRec = c.attId
+      ? CACHE.att.find(a=>a.id===c.attId)
+      : CACHE.att.find(a=>a.uid===c.uid && a.date===c.date);
+    const uObj=DB.findUser(c.uid)||null;
+    if(attRec){
+      const [ih,im]=c.reqIn.split(':').map(Number);
+      const [oh,om]=c.reqOut.split(':').map(Number);
+      const mins=(oh*60+om)-(ih*60+im)-breakMin(uObj||'employee');
+      const actual=roundH(Math.max(0,mins/60));
+      const ot=calcOT(actual,uObj||'employee');
+      await DB.updateAtt(attRec.id,{in:c.reqIn,out:c.reqOut,actual,ot,type:'打刻修正'});
+    } else {
+      // レコードがなければ新規作成
+      const [ih2,im2]=c.reqIn.split(':').map(Number);
+      const [oh2,om2]=c.reqOut.split(':').map(Number);
+      const mins2=(oh2*60+om2)-(ih2*60+im2)-breakMin(uObj||'employee');
+      const actual2=roundH(Math.max(0,mins2/60));
+      await DB.addAtt({id:aid(),uid:c.uid,date:c.date,in:c.reqIn,out:c.reqOut,
+        actual:actual2,ot:calcOT(actual2,uObj||'employee'),type:'打刻修正',inLoc:null,outLoc:null});
+    }
+  }
+  renderCorrectionAdmin();
+}
+
+// ═══════════════════════════════════════════════
+//  データリセット（管理者）
+// ═══════════════════════════════════════════════
+async function resetAllData(){
+  if(!confirm('打刻履歴・申請・日報・お知らせのデータをすべて削除しますか？\nこの操作は取り消せません。')) return;
+  const btn = document.querySelector('[onclick="resetAllData()"]');
+  if(btn){ btn.disabled=true; btn.textContent='削除中…'; }
+  try{
+    const attIds   = CACHE.att.map(r=>r.id);
+    const leaveIds = CACHE.leave.map(r=>r.id);
+    const rptIds   = CACHE.reports.map(r=>r.id);
+    const notifIds = CACHE.notif.map(r=>r.id);
+    for(const id of attIds)   await deleteDoc(doc(fsdb,'attendance',id));
+    for(const id of leaveIds) await deleteDoc(doc(fsdb,'leaves',id));
+    for(const id of rptIds)   await deleteDoc(doc(fsdb,'reports',id));
+    for(const id of notifIds) await deleteDoc(doc(fsdb,'notifications',id));
+    alert('削除完了しました。');
+  }catch(e){
+    alert('削除中にエラーが発生しました: '+e.message);
+  }
+  if(btn){ btn.disabled=false; btn.textContent='打刻・日報・お知らせを全削除'; }
+}
+
+// ═══════════════════════════════════════════════
+//  お知らせ
+// ═══════════════════════════════════════════════
+const LEAVE_NOTIF_TYPES=['leave_grant','leave_expiry','leave_obligation'];
+const MSG_NOTIF_TYPE='admin_message';
+let currentNotifTab='all';
+
+function switchNotifTab(tab){
+  currentNotifTab=tab;
+  document.querySelectorAll('.notif-tab-btn').forEach(b=>{
+    b.classList.toggle('active-notif-tab', b.dataset.notifTab===tab);
+  });
+  renderNotifications();
+}
+
+// 管理者メッセージ送信フォームの宛先リストを更新
+function refreshMsgToList(){
+  const sel=document.getElementById('msg-to');
+  if(!sel) return;
+  const cur=sel.value;
+  sel.innerHTML='<option value="__all__">全員</option>'+
+    CACHE.users.filter(u=>u.type!=='admin'&&u.visible!==false)
+      .sort((a,b)=>(a.displayOrder??999999)-(b.displayOrder??999999))
+      .map(u=>`<option value="${u.id}">${u.name}</option>`).join('');
+  if(cur) sel.value=cur;
+}
+
+async function sendAdminMessage(){
+  const to=document.getElementById('msg-to').value;
+  const body=document.getElementById('msg-body').value.trim();
+  const errEl=document.getElementById('msg-err');
+  if(!body){errEl.textContent='メッセージを入力してください';return;}
+  errEl.textContent='';
+  const createdAt=new Date().toISOString();
+  const date=dkey(new Date());
+  const senderName=S.user.name;
+  if(to==='__all__'){
+    // 全員（管理者以外）へ送信
+    const targets=CACHE.users.filter(u=>u.type!=='admin'&&u.visible!==false);
+    await Promise.all(targets.map(u=>DB.addNotif({
+      id:nid(),toUid:u.id,fromUid:S.user.id,type:MSG_NOTIF_TYPE,
+      date,message:`【${senderName}】${body}`,read:false,createdAt
+    })));
+  } else {
+    await DB.addNotif({
+      id:nid(),toUid:to,fromUid:S.user.id,type:MSG_NOTIF_TYPE,
+      date,message:`【${senderName}】${body}`,read:false,createdAt
+    });
+  }
+  document.getElementById('msg-body').value='';
+  alert('送信しました');
+}
+
+function renderNotifications(){
+  if(!S.user) return;
+  const myId = S.user.id;
+  // 管理者フォームの表示/非表示・宛先リスト更新
+  const adminCard=document.getElementById('admin-msg-card');
+  if(adminCard){
+    adminCard.style.display=S.user.type==='admin'?'block':'none';
+    if(S.user.type==='admin') refreshMsgToList();
+  }
+  let notifs = CACHE.notif.filter(n=>n.toUid===myId)
+    .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+  if(currentNotifTab==='leave'){
+    notifs=notifs.filter(n=>LEAVE_NOTIF_TYPES.includes(n.type));
+  } else if(currentNotifTab==='message'){
+    notifs=notifs.filter(n=>n.type===MSG_NOTIF_TYPE);
+  } else {
+    // すべて = 有給・メッセージ以外
+    notifs=notifs.filter(n=>!LEAVE_NOTIF_TYPES.includes(n.type)&&n.type!==MSG_NOTIF_TYPE);
+  }
+  const el = document.getElementById('notif-list');
+  if(!el) return;
+  if(!notifs.length){
+    el.innerHTML=`<div style="color:var(--muted);font-size:13px;padding:8px 0">${t('noNotif')}</div>`;
+  } else {
+    el.innerHTML = notifs.map(n=>`
+      <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+        <div style="flex:1;${n.read?'opacity:0.55':''}">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:3px">${n.date}　${(n.createdAt||'').slice(0,10)} ${(n.createdAt||'').slice(11,16)}</div>
+          <div style="font-size:13px;line-height:1.6">${escHtml(n.message)}</div>
+        </div>
+        ${!n.read?`<button class="btn btn-xs" onclick="markNotifRead('${n.id}')">既読</button>`:'<span style="font-size:10px;color:var(--muted)">既読</span>'}
+      </div>`).join('');
+  }
+  // 各タブのバッジ更新
+  [
+    {tab:'leave', types:LEAVE_NOTIF_TYPES, check:n=>LEAVE_NOTIF_TYPES.includes(n.type)},
+    {tab:'message', types:[MSG_NOTIF_TYPE], check:n=>n.type===MSG_NOTIF_TYPE},
+  ].forEach(({tab,check})=>{
+    const cnt=CACHE.notif.filter(n=>n.toUid===myId&&!n.read&&check(n)).length;
+    const btn=document.querySelector(`.notif-tab-btn[data-notif-tab="${tab}"]`);
+    if(!btn) return;
+    const ex=btn.querySelector('.notif-badge');
+    if(cnt>0){ if(ex) ex.textContent=cnt; else btn.insertAdjacentHTML('beforeend',`<span class="notif-badge">${cnt}</span>`); }
+    else { if(ex) ex.remove(); }
+  });
+  updateNotifBadge();
+}
+async function markNotifRead(id){
+  await DB.readNotif(id);
+  renderNotifications();
+}
+async function markAllNotifRead(){
+  if(!S.user) return;
+  await DB.readAllNotif(S.user.id);
+  renderNotifications();
+}
+function updateNotifBadge(){
+  if(!S.user) return;
+  const unread = CACHE.notif.filter(n=>n.toUid===S.user.id && !n.read).length;
+  document.querySelectorAll('.tab[data-tab="お知らせ"]').forEach(t=>{
+    const ex = t.querySelector('.notif-badge');
+    if(unread>0){
+      if(ex) ex.textContent=unread;
+      else t.insertAdjacentHTML('beforeend',`<span class="notif-badge">${unread}</span>`);
+    } else {
+      if(ex) ex.remove();
+    }
+  });
+}
+
+// ═══════════════════════════════════════════════
+//  モーダル
+// ═══════════════════════════════════════════════
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+document.querySelectorAll('.modal-wrap').forEach(w=>{
+  w.addEventListener('click',e=>{if(e.target===w)w.classList.remove('open');});
+});
+
+// ═══════════════════════════════════════════════
+//  リアルタイムリスナー（他端末の変更を自動反映）
+// ═══════════════════════════════════════════════
+// ─── 通知音 + アプリ内トースト（許可不要）───
+// AudioContext はユーザー操作（ログイン）時に初期化して使い回す
+let _audioCtx = null;
+function initAudioCtx(){
+  if(_audioCtx) return;
+  try{ _audioCtx = new(window.AudioContext||window.webkitAudioContext)(); }catch(e){}
+}
+function playNotifSound(){
+  try{
+    if(!_audioCtx) return;
+    // 停止中なら再開（バックグラウンドから復帰した場合など）
+    if(_audioCtx.state==='suspended') _audioCtx.resume();
+    const ctx=_audioCtx;
+    [[880,0,0.15],[1100,0.18,0.12]].forEach(([freq,delay,dur])=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination);
+      osc.type='sine'; osc.frequency.value=freq;
+      gain.gain.setValueAtTime(0,ctx.currentTime+delay);
+      gain.gain.linearRampToValueAtTime(0.35,ctx.currentTime+delay+0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+delay+dur);
+      osc.start(ctx.currentTime+delay);
+      osc.stop(ctx.currentTime+delay+dur+0.05);
+    });
+  }catch(e){}
+}
+function showToast(n){
+  // お知らせタブを開いている間は出さない
+  const active=document.querySelector('.tab.active');
+  if(active&&active.dataset.tab==='お知らせ') return;
+  const toast=document.createElement('div');
+  toast.style.cssText='position:fixed;bottom:24px;left:50%;transform:translateX(-50%);'
+    +'background:#222;color:#fff;border-radius:10px;padding:12px 20px;font-size:13px;'
+    +'max-width:85vw;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,.4);'
+    +'cursor:pointer;line-height:1.5;animation:fadeInUp .3s ease';
+  const msg=n.message.length>60?n.message.slice(0,60)+'…':n.message;
+  toast.textContent='📢 '+msg;
+  toast.onclick=()=>{ switchTab('お知らせ'); toast.remove(); };
+  document.body.appendChild(toast);
+  setTimeout(()=>{ toast.style.opacity='0'; toast.style.transition='opacity .4s'; setTimeout(()=>toast.remove(),400); },5000);
+}
+function showNotifAlert(n){
+  playNotifSound();
+  showToast(n);
+}
+
+// 通知リスナー（自分宛のみ取得 → プライバシー保護）
+let unsubNotif = null;
+function setupNotifListener(uid){
+  if(unsubNotif){ unsubNotif(); unsubNotif=null; }
+  CACHE.notif=[];
+  let initLoaded=false;
+  const q=query(colNotifs, where('toUid','==',uid));
+  unsubNotif=onSnapshot(q, snap=>{
+    // 初回ロード後の新着だけブラウザ通知
+    if(initLoaded){
+      snap.docChanges().forEach(change=>{
+        if(change.type==='added') showNotifAlert(change.doc.data());
+      });
+    }
+    CACHE.notif=snap.docs.map(d=>d.data())
+      .sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||''));
+    renderNotifications();
+    updateNotifBadge();
+    initLoaded=true;
+  });
+}
+function teardownNotifListener(){
+  if(unsubNotif){ unsubNotif(); unsubNotif=null; }
+  CACHE.notif=[];
+}
+
+function setupListeners(){
+  onSnapshot(colUsers, snap=>{
+    CACHE.users = snap.docs.map(d=>d.data());
+    renderLoginList();
+    if(S.user?.type==='admin') renderUserMgmt();
+  });
+  onSnapshot(colAtt, snap=>{
+    CACHE.att = snap.docs.map(d=>d.data())
+      .sort((a,b)=>b.date.localeCompare(a.date)||(b.in||'').localeCompare(a.in||''));
+    if(S.user?.type==='admin'){ renderAdminDash(); renderAttHistory(); restoreClockState(); }
+    else if(S.user){ renderHistTable(); updateStats(); renderCal(); restoreClockState(); }
+  });
+  onSnapshot(colLeave, snap=>{
+    CACHE.leave = snap.docs.map(d=>d.data())
+      .sort((a,b)=>b.date.localeCompare(a.date));
+    if(S.user?.type==='admin'){ renderLeaveApproval(); rend
